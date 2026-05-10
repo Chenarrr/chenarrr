@@ -1,4 +1,4 @@
-name: Generate Snake
+name: Generate 3D Contribution Graph
 
 on:
   schedule:
@@ -6,21 +6,22 @@ on:
   workflow_dispatch:
 
 jobs:
-  generate:
+  build:
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
-      - uses: Platane/snk@v3
-        with:
-          github_user_name: chenarrr
-          outputs: |
-            dist/github-snake.svg
-            dist/github-snake-dark.svg?palette=github-dark
+      - uses: actions/checkout@v4
 
-      - uses: crazy-max/ghaction-github-pages@v3
-        with:
-          target_branch: output
-          build_dir: dist
+      - uses: yoshi389111/github-profile-3d-contrib@0.7.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          USERNAME: chenarrr
+
+      - name: Push output
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add -A
+          git commit -m "update 3D contribution graph" || exit 0
+          git push
