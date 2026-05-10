@@ -2,27 +2,19 @@
 
 <div align="center">
 
-<img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=600&size=26&duration=2800&pause=900&color=00B4D8&center=true&vCenter=true&width=620&lines=Hey%2C+I'm+Chenar+%F0%9F%91%8B;Full-Stack+%26+DevOps+Engineer;Kubernetes+%E2%80%A2+GitOps+%E2%80%A2+Cloud+Native;Self-hosting+everything+that+matters" alt="Typing SVG" />
+<img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=700&size=28&duration=4000&pause=1500&color=00D4FF&center=true&vCenter=true&width=620&lines=Hey%2C+I'm+Chenar+%F0%9F%91%8B;Full-Stack+%26+DevOps+Engineer;Kubernetes+%E2%80%A2+GitOps+%E2%80%A2+Cloud+Native;Self-hosting+everything+that+matters" alt="Typing SVG" />
 
-<br/>
+<br/><br/>
 
-[![Portfolio](https://img.shields.io/badge/chenar.space-0d1117?style=flat-square&logo=googlechrome&logoColor=00B4D8)](https://chenar.space)
-[![EchoVote](https://img.shields.io/badge/EchoVote-0d1117?style=flat-square&logo=soundcloud&logoColor=00B4D8)](https://echovote.chenar.space)
-[![Profile Views](https://komarev.com/ghpvc/?username=chenarrr&style=flat-square&color=00B4D8&label=profile+views)](https://github.com/chenarrr)
+[![Portfolio](https://img.shields.io/badge/chenar.space-0d1117?style=flat-square&logo=googlechrome&logoColor=00D4FF)](https://chenar.space)
+[![EchoVote](https://img.shields.io/badge/EchoVote-0d1117?style=flat-square&logo=soundcloud&logoColor=00D4FF)](https://echovote.chenar.space)
+[![Profile Views](https://komarev.com/ghpvc/?username=chenarrr&style=flat-square&color=00D4FF&label=profile+views)](https://github.com/chenarrr)
 
 </div>
 
----
+<br/>
 
-```yaml
-whoami:
-  name: Chenar
-  focus: [Kubernetes, GitOps, Cloud Native, Self-Hosting]
-```
-
----
-
-### Infrastructure
+**Infrastructure**
 
 ![Kubernetes](https://img.shields.io/badge/Kubernetes-0d1117?style=flat-square&logo=kubernetes&logoColor=326CE5)
 ![k3s](https://img.shields.io/badge/k3s-0d1117?style=flat-square&logo=kubernetes&logoColor=FFA500)
@@ -33,7 +25,7 @@ whoami:
 ![Docker](https://img.shields.io/badge/Docker-0d1117?style=flat-square&logo=docker&logoColor=2496ED)
 ![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-0d1117?style=flat-square&logo=githubactions&logoColor=2088FF)
 
-### Languages & Frameworks
+**Languages & Frameworks**
 
 ![JavaScript](https://img.shields.io/badge/JavaScript-0d1117?style=flat-square&logo=javascript&logoColor=F7DF1E)
 ![Dart](https://img.shields.io/badge/Dart-0d1117?style=flat-square&logo=dart&logoColor=0175C2)
@@ -46,29 +38,21 @@ whoami:
 ![MongoDB](https://img.shields.io/badge/MongoDB-0d1117?style=flat-square&logo=mongodb&logoColor=47A248)
 ![Redis](https://img.shields.io/badge/Redis-0d1117?style=flat-square&logo=redis&logoColor=DC382D)
 
----
-
-### Stats
+<br/>
 
 <div align="center">
 
-<img height="170" src="https://github-readme-stats.vercel.app/api?username=chenarrr&show_icons=true&hide_border=true&theme=tokyonight&rank_icon=github&include_all_commits=true&bg_color=0d1117&title_color=00B4D8&text_color=c9d1d9&icon_color=00B4D8" />
-<img height="170" src="https://github-readme-stats.vercel.app/api/top-langs/?username=chenarrr&hide_border=true&theme=tokyonight&layout=compact&langs_count=6&bg_color=0d1117&title_color=00B4D8&text_color=c9d1d9" />
+<img height="170" src="https://github-readme-stats.vercel.app/api?username=chenarrr&show_icons=true&hide_border=true&theme=tokyonight&rank_icon=github&include_all_commits=true&bg_color=0d1117&title_color=00D4FF&text_color=c9d1d9&icon_color=00D4FF" />
+<img height="170" src="https://github-readme-stats.vercel.app/api/top-langs/?username=chenarrr&hide_border=true&theme=tokyonight&layout=compact&langs_count=6&bg_color=0d1117&title_color=00D4FF&text_color=c9d1d9" />
 
 <br/>
 
-<img src="https://streak-stats.demolab.com?user=chenarrr&theme=tokyonight-duo&hide_border=true&background=0d1117&stroke=00B4D8&ring=00B4D8&fire=ff6e6e&currStreakLabel=00B4D8" />
+<img src="https://streak-stats.demolab.com?user=chenarrr&theme=tokyonight-duo&hide_border=true&background=0d1117&stroke=00D4FF&ring=00D4FF&fire=ff6e6e&currStreakLabel=00D4FF" />
 
-</div>
+<br/>
 
----
-
-### Contributions
-
-<div align="center">
 <img src="https://raw.githubusercontent.com/Chenarrr/chenarrr/output/profile-3d-contrib/profile-night-rainbow.svg" alt="3D Contribution Graph" />
-</div>
 
----
+</div>
 
 <img width="100%" src="https://capsule-render.vercel.app/api?type=waving&color=0:0d1117,50:1a1b4b,100:0d1117&height=100&section=footer"/>
