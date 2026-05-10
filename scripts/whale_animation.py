@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Docker whale contribution animation — row sweep, one direction."""
+"""Docker whale contribution animation — SMIL-only, cells fly up when eaten."""
 
 import os, json, urllib.request
 
@@ -9,17 +9,17 @@ USER  = os.environ.get("USERNAME", "chenarrr")
 BG         = "#090f1a"
 LEVELS     = ["#1e2d45", "#0e4d8a", "#0077b6", "#0096c7", "#00D4FF"]
 WHALE_BLUE = "#2496ED"
-WHITE      = "white"
 
 CELL  = 11
 GAP   = 2
 STEP  = CELL + GAP
 COLS  = 52
 ROWS  = 7
-PAD   = 16          # padding around grid
+PAD   = 16
 W     = COLS * STEP + PAD * 2
 H     = ROWS * STEP + PAD * 2 + 20
-DUR   = 30          # seconds
+DUR   = 30     # seconds
+HALF  = CELL // 2
 
 # ── fetch contributions ────────────────────────────────────────────────────────
 query = json.dumps({"query": """{ user(login: "%s") {
@@ -46,11 +46,10 @@ def level(n):
     if n <= 9: return 3
     return 4
 
-# cell centre coords
-def cx(c): return PAD + c * STEP + CELL // 2
-def cy(r): return PAD + 20 + r * STEP + CELL // 2
+def cx(c): return PAD + c * STEP + HALF
+def cy(r): return PAD + 20 + r * STEP + HALF
 
-# ── row-by-row path (sweeps horizontally, one direction feel) ─────────────────
+# ── row-by-row horizontal path ─────────────────────────────────────────────────
 path_cells = []
 for ri in range(ROWS):
     cols = range(COLS) if ri % 2 == 0 else range(COLS - 1, -1, -1)
@@ -58,7 +57,7 @@ for ri in range(ROWS):
 
 n = len(path_cells)
 
-# ── smooth SVG motion path — bezier curves only at row-end turns ──────────────
+# ── smooth motion path — bezier arcs at row turns ─────────────────────────────
 def build_path(cells):
     pts  = [(cx(c), cy(r)) for c, r in cells]
     segs = [f"M {pts[0][0]},{pts[0][1]}"]
@@ -68,11 +67,10 @@ def build_path(cells):
         px, py = pts[i - 1]
         x,  y  = pts[i]
         if r_curr != r_prev:
-            # row transition — smooth outward arc
-            bulge = STEP * 1.2
-            if r_prev % 2 == 0:               # right-side turn
+            bulge = STEP * 1.3
+            if r_prev % 2 == 0:
                 segs.append(f"C {px+bulge},{py} {x+bulge},{y} {x},{y}")
-            else:                              # left-side turn
+            else:
                 segs.append(f"C {px-bulge},{py} {x-bulge},{y} {x},{y}")
         else:
             segs.append(f"L {x},{y}")
@@ -80,52 +78,64 @@ def build_path(cells):
 
 path_d = build_path(path_cells)
 
-# ── CSS animations: cells pop outward then vanish when eaten ──────────────────
-styles = []
-rects  = []
+# ── cells: SMIL fly-up + scale + fade when eaten ──────────────────────────────
+# Structure per cell:
+#   <g transform="translate(ox,oy)">          ← static position
+#     <g>                                      ← animated: fly up
+#       <animateTransform type="translate" …/>
+#       <rect x="-HALF" y="-HALF" …>          ← rect centred at 0,0
+#         <animateTransform type="scale" …/>  ← pop then shrink
+#         <animate attributeName="opacity" …/>
+#       </rect>
+#     </g>
+#   </g>
 
+def kt(pct):      # keyTime fraction, 5 dp
+    return f"{min(max(pct / 100, 0), 1):.5f}"
+
+cells_svg = []
 for idx, (pc, pr) in enumerate(path_cells):
-    count  = lookup.get((pc, pr), 0)
-    color  = LEVELS[level(count)]
-    rx     = PAD + pc * STEP
-    ry     = PAD + 20 + pr * STEP
-    ox, oy = rx + CELL // 2, ry + CELL // 2
+    count = lookup.get((pc, pr), 0)
+    color = LEVELS[level(count)]
+    ox    = cx(pc)
+    oy    = cy(pr)
 
-    name   = f"e{pc}x{pr}"
-    t0     = round(idx / n * 100, 3)
-    t_pop  = round(min(t0 + 1.0, 99.5), 3)
-    t_gone = round(min(t0 + 2.2, 100.0), 3)
+    t0    = round(idx / n * 100, 3)           # whale arrives (%)
+    t_pop = round(min(t0 + 1.0, 99.5), 3)    # peak pop
+    t_end = round(min(t0 + 2.5, 100.0), 3)   # fully gone
 
-    styles.append(
-        f"@keyframes {name}{{0%,{t0}%{{opacity:1;transform:scale(1)}}"
-        f"{t_pop}%{{opacity:.6;transform:scale(1.5)}}"
-        f"{t_gone}%,100%{{opacity:0;transform:scale(0)}}}}"
-    )
-    rects.append(
-        f'<rect x="{rx}" y="{ry}" width="{CELL}" height="{CELL}" rx="2" fill="{color}" '
-        f'style="transform-origin:{ox}px {oy}px;'
-        f'animation:{name} {DUR}s ease-in-out infinite"/>'
-    )
+    ktimes = f"0;{kt(t0)};{kt(t_pop)};{kt(t_end)};1"
 
-# ── Docker Moby whale (facing right, accurate design) ─────────────────────────
-#   head = left, tail flukes = right, containers on top
+    cells_svg.append(f"""<g transform="translate({ox},{oy})">
+  <g>
+    <animateTransform attributeName="transform" type="translate"
+      values="0,0; 0,0; 0,-5; 0,-20; 0,-20"
+      keyTimes="{ktimes}" dur="{DUR}s" repeatCount="indefinite" calcMode="spline"
+      keySplines="0 0 1 1; .2 0 .8 1; .4 0 1 1; 0 0 1 1"/>
+    <rect x="-{HALF}" y="-{HALF}" width="{CELL}" height="{CELL}" rx="2" fill="{color}">
+      <animateTransform attributeName="transform" type="scale"
+        values="1; 1; 1.5; 0.15; 0.15"
+        keyTimes="{ktimes}" dur="{DUR}s" repeatCount="indefinite" calcMode="spline"
+        keySplines="0 0 1 1; .2 0 .6 1; .4 0 1 1; 0 0 1 1"/>
+      <animate attributeName="opacity"
+        values="1; 1; 0.7; 0; 0"
+        keyTimes="{ktimes}" dur="{DUR}s" repeatCount="indefinite" calcMode="spline"
+        keySplines="0 0 1 1; .2 0 .8 1; .4 0 1 1; 0 0 1 1"/>
+    </rect>
+  </g>
+</g>""")
+
+# ── Docker Moby whale (facing right) ──────────────────────────────────────────
 whale = f"""<symbol id="wh" viewBox="0 0 30 20" overflow="visible">
-  <!-- body -->
   <ellipse cx="13" cy="13" rx="12" ry="8" fill="{WHALE_BLUE}"/>
-  <!-- tail — two flukes on the right -->
   <path d="M23 10 L30 6  L28 13 Z" fill="{WHALE_BLUE}"/>
   <path d="M23 14 L30 18 L28 11 Z" fill="{WHALE_BLUE}"/>
-  <!-- container 1 -->
-  <rect x="5"  y="3" width="7" height="7" rx="1.5" fill="{WHITE}" opacity="0.92"/>
-  <!-- container 2 -->
-  <rect x="14" y="3" width="7" height="7" rx="1.5" fill="{WHITE}" opacity="0.92"/>
-  <!-- centre divider lines (Docker container look) -->
+  <rect x="5"  y="3" width="7" height="7" rx="1.5" fill="white" opacity="0.92"/>
+  <rect x="14" y="3" width="7" height="7" rx="1.5" fill="white" opacity="0.92"/>
   <line x1="8.5"  y1="3" x2="8.5"  y2="10" stroke="{WHALE_BLUE}" stroke-width="0.9"/>
   <line x1="17.5" y1="3" x2="17.5" y2="10" stroke="{WHALE_BLUE}" stroke-width="0.9"/>
-  <!-- eye on head (left side) -->
-  <circle cx="3"   cy="12" r="2.2" fill="{WHITE}"/>
+  <circle cx="3"   cy="12" r="2.2" fill="white"/>
   <circle cx="3.4" cy="12" r="1"   fill="#0d1117"/>
-  <!-- water spout from blow hole -->
   <path d="M9 1 Q10.5 -3 12 1 Q13.5 -3 15 1"
         stroke="{WHALE_BLUE}" stroke-width="1.8" fill="none" stroke-linecap="round"/>
 </symbol>"""
@@ -133,12 +143,9 @@ whale = f"""<symbol id="wh" viewBox="0 0 30 20" overflow="visible">
 # ── assemble ───────────────────────────────────────────────────────────────────
 svg = f"""<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
   viewBox="0 0 {W} {H}" width="{W}" height="{H}">
-<defs>
-  {whale}
-  <style>{"".join(styles)}</style>
-</defs>
+<defs>{whale}</defs>
 <rect width="{W}" height="{H}" rx="8" fill="{BG}"/>
-{"".join(rects)}
+{"".join(cells_svg)}
 <path id="wp" d="{path_d}" fill="none" visibility="hidden"/>
 <use href="#wh" width="30" height="20" x="-15" y="-10">
   <animateMotion dur="{DUR}s" repeatCount="indefinite" calcMode="linear">
