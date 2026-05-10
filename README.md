@@ -17,10 +17,7 @@
 ```yaml
 whoami:
   name: Chenar
-  role: Full-Stack & DevOps Engineer
   focus: [Kubernetes, GitOps, Cloud Native, Self-Hosting]
-  currently_building: EchoVote — real-time music voting for venues
-  philosophy: "If it's not automated, it's not done."
 ```
 
 ---
