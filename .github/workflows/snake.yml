@@ -15,7 +15,7 @@ jobs:
         with:
           github_user_name: chenarrr
           outputs: |
-            dist/ocean.gif?color_snake=00D4FF&color_dots=#0d1117,#1a1b4b,#1e3a5f,#1a6b8a,#00D4FF&color_background=0d1117
+            dist/ocean.gif?color_snake=00D4FF&color_dots=#0e2233,#0e3d5c,#0a6690,#0099cc,#00D4FF&color_background=090f1a
 
       - uses: crazy-max/ghaction-github-pages@v3
         with:
