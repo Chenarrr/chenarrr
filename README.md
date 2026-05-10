@@ -41,16 +41,11 @@
 
 <div align="center">
 
-<img height="170" src="https://github-readme-stats.vercel.app/api?username=chenarrr&show_icons=true&hide_border=true&theme=tokyonight&rank_icon=github&include_all_commits=true&bg_color=0d1117&title_color=00D4FF&text_color=c9d1d9&icon_color=00D4FF" />
-<img height="170" src="https://github-readme-stats.vercel.app/api/top-langs/?username=chenarrr&hide_border=true&theme=tokyonight&layout=compact&langs_count=6&bg_color=0d1117&title_color=00D4FF&text_color=c9d1d9" />
-
-<br/>
-
 <img src="https://streak-stats.demolab.com?user=chenarrr&theme=tokyonight-duo&hide_border=true&background=0d1117&stroke=00D4FF&ring=00D4FF&fire=ff6e6e&currStreakLabel=00D4FF" />
 
-<br/>
+<br/><br/>
 
-<img src="https://raw.githubusercontent.com/Chenarrr/chenarrr/output/profile-3d-contrib/profile-night-rainbow.svg" alt="3D Contribution Graph" />
+<img src="https://raw.githubusercontent.com/Chenarrr/chenarrr/output/ocean.gif" alt="Contribution Ocean" />
 
 </div>
 
