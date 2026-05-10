@@ -7,7 +7,6 @@
 <br/><br/>
 
 [![Portfolio](https://img.shields.io/badge/chenar.space-0d1117?style=flat-square&logo=googlechrome&logoColor=00D4FF)](https://chenar.space)
-[![EchoVote](https://img.shields.io/badge/EchoVote-0d1117?style=flat-square&logo=soundcloud&logoColor=00D4FF)](https://echovote.chenar.space)
 [![Profile Views](https://komarev.com/ghpvc/?username=chenarrr&style=flat-square&color=00D4FF&label=profile+views)](https://github.com/chenarrr)
 
 </div>
