@@ -1,4 +1,4 @@
-name: Generate Ocean Animation
+name: Generate Snake Animation
 
 on:
   schedule:
@@ -15,7 +15,8 @@ jobs:
         with:
           github_user_name: chenarrr
           outputs: |
-            dist/ocean.gif?color_snake=00D4FF&color_dots=#0e2233,#0e3d5c,#0a6690,#0099cc,#00D4FF&color_background=090f1a
+            dist/snake.svg?color_snake=00D4FF&color_dots=#1e2d45,#0e4d8a,#0077b6,#0096c7,#00D4FF&color_background=090f1a
+            dist/snake-dark.svg?palette=github-dark
 
       - uses: crazy-max/ghaction-github-pages@v3
         with:

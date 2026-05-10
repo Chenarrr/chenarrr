@@ -45,7 +45,7 @@
 
 <br/><br/>
 
-<img src="https://raw.githubusercontent.com/Chenarrr/chenarrr/output/ocean.gif" alt="Contribution Ocean" />
+<img src="https://raw.githubusercontent.com/Chenarrr/chenarrr/output/snake.svg" alt="Contribution Snake" />
 
 </div>
 
