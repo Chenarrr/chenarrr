@@ -1,4 +1,4 @@
-name: Generate Snake Animation
+name: Generate Docker Whale Animation
 
 on:
   schedule:
@@ -11,12 +11,13 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: Platane/snk@v3
-        with:
-          github_user_name: chenarrr
-          outputs: |
-            dist/snake.svg?color_snake=00D4FF&color_dots=#1e2d45,#0e4d8a,#0077b6,#0096c7,#00D4FF&color_background=090f1a
-            dist/snake-dark.svg?palette=github-dark
+      - uses: actions/checkout@v4
+
+      - name: Generate whale animation
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          USERNAME: chenarrr
+        run: python3 scripts/whale_animation.py
 
       - uses: crazy-max/ghaction-github-pages@v3
         with:
