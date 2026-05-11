@@ -100,7 +100,8 @@ for idx, (pc, pr) in enumerate(path_cells):
     ox    = cx(pc)
     oy    = cy(pr)
 
-    t0     = idx / n * 100
+    # First cell shifted by 0.01% so its keyTimes don't collide with t=0
+    t0     = max(idx / n * 100, 0.01)
     # Caps must stay strictly greater than max(t0)=99.725 for monotonic keyTimes
     t_pop  = min(t0 + EAT_POP_PCT,  99.85)
     t_eat  = min(t0 + EAT_EAT_PCT,  99.92)
@@ -108,17 +109,26 @@ for idx, (pc, pr) in enumerate(path_cells):
 
     parts = [f'<g transform="translate({ox:.2f},{oy:.2f})">']
 
-    # GLOW HALO — only on level-4 cells with enough room for pulse before eating
-    if lvl == 4 and t0 > 0.8:
-        # last pulse keyTime is 0.6 — t_pop must be > that for monotonicity
-        t_glow_fade = max(t_pop - 0.05, 0.65)
+    # GLOW HALO — level-4 cells only.  Nested groups:
+    #   outer <g> opacity animates 1→0 at eating time (always monotonic)
+    #   inner <rect> opacity pulses on its own 2.5 s loop (independent)
+    # The two opacities multiply, so the pulse fades out smoothly when eaten.
+    if lvl == 4:
         parts.append(f"""
-  <rect x="-9" y="-9" width="18" height="18" rx="4" fill="{color}" opacity="0.3">
+  <g>
     <animate attributeName="opacity"
-      values="0.25; 0.55; 0.3; 0.55; 0.25; 0"
-      keyTimes="0; 0.2; 0.4; 0.6; {kt(t_glow_fade)}; {kt(t_eat)}"
-      dur="{DUR}s" repeatCount="indefinite"/>
-  </rect>""")
+      values="1; 1; 0"
+      keyTimes="0; {kt(t_pop)}; {kt(t_eat)}"
+      dur="{DUR}s" repeatCount="indefinite"
+      calcMode="spline" keySplines="0 0 1 1; .4 0 1 1"/>
+    <rect x="-9" y="-9" width="18" height="18" rx="4" fill="{color}" opacity="0.4">
+      <animate attributeName="opacity"
+        values="0.3; 0.6; 0.3"
+        keyTimes="0; 0.5; 1"
+        dur="2.5s" repeatCount="indefinite"
+        calcMode="spline" keySplines=".4 0 .6 1; .4 0 .6 1"/>
+    </rect>
+  </g>""")
 
     # ── cell rect ────────────────────────────────────────────────────────────
     # Two animations:
@@ -172,8 +182,9 @@ for idx, (pc, pr) in enumerate(path_cells):
     # SMALL WHITE FLASH at the moment of bite
     if t0 > 0.3:
         f_t0   = t0
-        f_peak = min(t0 + 0.2, 99.4)
-        f_end  = min(t0 + 1.5, 99.8)
+        # Caps must be > max t0 (99.725) for monotonic keyTimes
+        f_peak = min(t0 + 0.2, 99.88)
+        f_end  = min(t0 + 1.5, 99.97)
         parts.append(f"""
   <circle cx="0" cy="0" r="0" fill="white">
     <animate attributeName="r"
