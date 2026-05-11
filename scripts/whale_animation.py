@@ -1,22 +1,18 @@
 #!/usr/bin/env python3
 """
-Docker Moby whale contribution animation — v4 "actually eats them".
+Docker Moby whale contribution animation — v5 "real eating, clear trail".
 
-The eating moment is the entire point.  In v3 the cell pop happened ~0.2 s
-*after* the whale's mouth had already moved on, so the eating looked
-disconnected from the whale.
+The key fix from v4: eaten cells transition to the EMPTY-cell colour
+(#1e2d45) instead of going to opacity 0.  Just like the original snake
+animation, this leaves a clearly visible trail of consumed contributions
+behind the whale, so you can SEE what's been eaten.
 
-In v4:
-  • Cell crushes within 0.07 s of mouth arrival (well inside the 0.12 s the
-    whale spends on a cell).  Crush IS the bite.
-  • Cell shatters into 4 colour-matched quarter-shards that fly out
-    diagonally — clearly destroyed, not just faded.
-  • Big white shock-wave flash (radius 28 px) bursts from the cell.
-  • Whale body has a swallow-pulse synced with the mouth chomp.
-  • Mouth jaws snap shut just as cells crush — looks like an actual bite.
-  • Bubbles drift up *after* the eating, like a digestive burp.
-
-Preserved: row flip, tail wag, level-4 glow, fade-in respawn, smooth bob.
+Stripped most visual noise (shards, bubbles, shock-wave) — they were
+drowning out the actual eating.  Kept only what makes the bite obvious:
+  • cell pops to 1.4× briefly when bitten
+  • fill colour transitions to empty (visible trail)
+  • small white flash at the bite moment
+  • everything else (whale flips, jaws, tail wag, body swallow, glow) stays
 """
 
 import os, json, urllib.request
@@ -24,9 +20,10 @@ import os, json, urllib.request
 TOKEN = os.environ["GITHUB_TOKEN"]
 USER  = os.environ.get("USERNAME", "chenarrr")
 
-# ── visual constants ──────────────────────────────────────────────────────────
+# ── visuals ────────────────────────────────────────────────────────────────────
 BG     = "#090f1a"
-LEVELS = ["#1e2d45", "#0e4d8a", "#0077b6", "#0096c7", "#00D4FF"]
+EMPTY  = "#1e2d45"                                  # what eaten cells become
+LEVELS = [EMPTY, "#0e4d8a", "#0077b6", "#0096c7", "#00D4FF"]
 WBLUE  = "#2496ED"
 
 CELL  = 11
@@ -38,19 +35,17 @@ PADX  = 18
 PADY  = 38
 W     = COLS * STEP + PADX * 2
 H     = ROWS * STEP + PADY + PADX + 8
-DUR   = 45
+DUR   = 50           # slightly slower so eating is more readable
 HALF  = CELL / 2
 
-# Eating phase percentages (of DUR).  Whale spends ~0.275 % per cell.
-EAT_JOLT_PCT   = 0.05    # cell pops slightly bigger — anticipation
-EAT_CRUSH_PCT  = 0.22    # cell crushed to nothing — well within whale's time
-EAT_BURST_PCT  = 0.55    # flash and shards peak
-EAT_FADE_PCT   = 2.5     # everything cleared
-BUBBLE_END_PCT = 4.0     # bubbles drift up after burst
+# Eating phases (% of DUR) — tight, all within whale's mouth window
+EAT_POP_PCT   = 0.10  # cell starts popping
+EAT_EAT_PCT   = 0.30  # peak pop, colour transitions
+EAT_DONE_PCT  = 0.55  # back to normal size, fully empty colour
 
-FADE_IN_END_PCT = 2.5    # cells respawn from invisible at start of loop
+FADE_IN_END_PCT = 2.0  # respawn colour fade at start of loop
 
-# ── fetch contribution data ────────────────────────────────────────────────────
+# ── fetch contributions ────────────────────────────────────────────────────────
 query = json.dumps({"query": """{ user(login: "%s") {
   contributionsCollection { contributionCalendar {
     weeks { contributionDays { contributionCount } }
@@ -82,7 +77,7 @@ def level(n):
 def cx(c): return PADX + c * STEP + HALF
 def cy(r): return PADY + r * STEP + HALF
 
-# ── row-by-row path, uniform straight segments ────────────────────────────────
+# ── path ───────────────────────────────────────────────────────────────────────
 path_cells = []
 for ri in range(ROWS):
     cols = range(COLS) if ri % 2 == 0 else range(COLS - 1, -1, -1)
@@ -95,152 +90,99 @@ def kt(p):    return f"{min(max(p / 100, 0), 1):.5f}"
 def kts(*ps): return ";".join(kt(p) for p in ps)
 
 # ── cells ──────────────────────────────────────────────────────────────────────
-#
-#  Per-cell structure:
-#    <g translate(ox,oy)>
-#      [glow halo (lvl 4 only)]
-#      <rect cell>          — pops 1→1.4 then crushes to 0.02
-#      <circle flash>       — white shock-wave radiating outward
-#      4 × <rect shard>     — quarters of the cell flying diagonally out
-#      2 × <circle bubble>  — slow drift upward after the eating
-#    </g>
-#
-#  No more fly-up.  The cell is DESTROYED IN PLACE.
-
 cells_svg = []
 
 for idx, (pc, pr) in enumerate(path_cells):
     count = lookup.get((pc, pr), 0)
     lvl   = level(count)
     color = LEVELS[lvl]
+    is_empty = (lvl == 0)
     ox    = cx(pc)
     oy    = cy(pr)
 
     t0     = idx / n * 100
-    t_jolt = min(t0 + EAT_JOLT_PCT,  99.4)
-    t_crush= min(t0 + EAT_CRUSH_PCT, 99.6)
-    t_burst= min(t0 + EAT_BURST_PCT, 99.8)
-    t_fade = min(t0 + EAT_FADE_PCT,  99.9)
-    t_bub  = min(t0 + BUBBLE_END_PCT, 99.95)
-
-    idle_period = round(2.0 + (pc % 4) * 0.5, 1)
-    idle_begin  = round(((pc * 7 + pr * 13) % 40) / 10, 1)
+    t_pop  = min(t0 + EAT_POP_PCT,  99.5)
+    t_eat  = min(t0 + EAT_EAT_PCT,  99.7)
+    t_done = min(t0 + EAT_DONE_PCT, 99.9)
 
     parts = [f'<g transform="translate({ox:.2f},{oy:.2f})">']
 
-    # GLOW HALO (level 4 only — pulses, then absorbed at crush)
+    # GLOW HALO — only on level-4 cells, fades when eaten
     if lvl == 4:
         parts.append(f"""
   <rect x="-9" y="-9" width="18" height="18" rx="4" fill="{color}" opacity="0.3">
     <animate attributeName="opacity"
-      values="0.28; 0.6; 0.3; 0.6; 0.3; 0"
-      keyTimes="0; 0.2; 0.4; 0.6; {kt(min(t_jolt - 0.1, 99))}; {kt(t_crush)}"
+      values="0.25; 0.55; 0.3; 0.55; 0.25; 0"
+      keyTimes="0; 0.2; 0.4; 0.6; {kt(min(t_pop - 0.05, 99))}; {kt(t_eat)}"
       dur="{DUR}s" repeatCount="indefinite"/>
   </rect>""")
 
-    # idle gentle pulse + cell rect (NO fly-up — crushes in place)
-    parts.append(f"""
+    # ── cell rect ────────────────────────────────────────────────────────────
+    # Two animations:
+    #   1. scale  — pop 1 → 1.4 → 1 (the "bite" motion)
+    #   2. fill   — colour → EMPTY (the trail of consumed cells)
+
+    # idle pulse only on non-empty cells (empty cells stay static)
+    idle_open = idle_close = ""
+    if not is_empty:
+        idle_period = round(2.2 + (pc % 4) * 0.4, 1)
+        idle_begin  = round(((pc * 7 + pr * 13) % 40) / 10, 1)
+        idle_open = f"""
   <g>
     <animateTransform attributeName="transform" type="scale"
       values="1;1.05;1" keyTimes="0;0.5;1"
-      dur="{idle_period}s" begin="{idle_begin}s" repeatCount="indefinite"/>
+      dur="{idle_period}s" begin="{idle_begin}s" repeatCount="indefinite"/>"""
+        idle_close = "</g>"
+
+    parts.append(f"""{idle_open}
     <rect x="-{HALF}" y="-{HALF}" width="{CELL}" height="{CELL}" rx="2" fill="{color}">
       <animateTransform attributeName="transform" type="scale"
-        values="1; 1; 1.4; 0.02; 0.02"
-        keyTimes="{kts(0, t0, t_jolt, t_crush, t_fade)}"
+        values="1; 1; 1.45; 1; 1"
+        keyTimes="{kts(0, t0, t_pop, t_eat, t_done)}"
         dur="{DUR}s" repeatCount="indefinite"
         calcMode="spline"
         keySplines="0 0 1 1; .1 .9 .3 1; .3 0 .7 1; 0 0 1 1"/>""")
 
-    # opacity — with optional respawn fade-in
-    if t0 > FADE_IN_END_PCT:
-        op_v = "0; 1; 1; 1; 0; 0"
-        op_k = kts(0, FADE_IN_END_PCT, t0, t_jolt, t_crush, t_fade)
-        op_s = (".4 0 .8 1; 0 0 1 1; 0 0 1 1; .4 0 1 1; 0 0 1 1")
-    else:
-        op_v = "1; 1; 1; 0; 0"
-        op_k = kts(0, t0, t_jolt, t_crush, t_fade)
-        op_s = "0 0 1 1; 0 0 1 1; .4 0 1 1; 0 0 1 1"
-
-    parts.append(f"""
-      <animate attributeName="opacity"
-        values="{op_v}" keyTimes="{op_k}"
+    # fill colour change — only meaningful for non-empty cells.
+    # For non-empty cells with t0 > fade-in window, the cell colour fades back
+    # from EMPTY → its level colour at the start of each loop (respawn).
+    if not is_empty:
+        if t0 > FADE_IN_END_PCT:
+            parts.append(f"""
+      <animate attributeName="fill"
+        values="{EMPTY}; {color}; {color}; {color}; {EMPTY}; {EMPTY}"
+        keyTimes="0; {kt(FADE_IN_END_PCT)}; {kt(t0)}; {kt(t_pop)}; {kt(t_eat)}; 1"
         dur="{DUR}s" repeatCount="indefinite"
-        calcMode="spline" keySplines="{op_s}"/>
-    </rect>
-  </g>""")
+        calcMode="spline"
+        keySplines=".4 0 .8 1; 0 0 1 1; 0 0 1 1; .2 0 .8 1; 0 0 1 1"/>""")
+        else:
+            parts.append(f"""
+      <animate attributeName="fill"
+        values="{color}; {color}; {color}; {EMPTY}; {EMPTY}"
+        keyTimes="0; {kt(t0)}; {kt(t_pop)}; {kt(t_eat)}; 1"
+        dur="{DUR}s" repeatCount="indefinite"
+        calcMode="spline"
+        keySplines="0 0 1 1; 0 0 1 1; .2 0 .8 1; 0 0 1 1"/>""")
 
-    # FLASH SHOCK-WAVE — white, expands from cell centre
+    parts.append(f"    </rect>{idle_close}")
+
+    # SMALL WHITE FLASH at the moment of bite
     if t0 > 0.3:
+        f_t0   = t0
+        f_peak = min(t0 + 0.2, 99.4)
+        f_end  = min(t0 + 1.5, 99.8)
         parts.append(f"""
   <circle cx="0" cy="0" r="0" fill="white">
     <animate attributeName="r"
-      values="0; 0; 3; 28; 32"
-      keyTimes="{kts(0, t0, t_jolt, t_burst, t_fade)}"
+      values="0; 0; 3; 14"
+      keyTimes="0; {kt(f_t0)}; {kt(f_peak)}; {kt(f_end)}"
       dur="{DUR}s" repeatCount="indefinite"
-      calcMode="spline" keySplines="0 0 1 1; .1 .9 .2 1; .3 0 .8 1; 0 0 1 1"/>
+      calcMode="spline" keySplines="0 0 1 1; .1 .9 .2 1; .3 0 .8 1"/>
     <animate attributeName="opacity"
-      values="0; 0; 0.95; 0.25; 0"
-      keyTimes="{kts(0, t0, t_jolt, t_burst, t_fade)}"
+      values="0; 0; 0.85; 0"
+      keyTimes="0; {kt(f_t0)}; {kt(f_peak)}; {kt(f_end)}"
       dur="{DUR}s" repeatCount="indefinite"
-      calcMode="spline" keySplines="0 0 1 1; .1 .9 .2 1; .3 0 1 1; 0 0 1 1"/>
-  </circle>""")
-
-    # SHARDS — 4 colour-matched quarters fly out diagonally
-    if t0 > 0.3:
-        for dx, dy in [(11, -9), (-11, -9), (12, 9), (-12, 9)]:
-            parts.append(f"""
-  <rect x="-2" y="-2" width="4" height="4" rx="0.5" fill="{color}" opacity="0">
-    <animate attributeName="x"
-      values="-2; -2; {dx-2}"
-      keyTimes="{kts(0, t_jolt, t_fade)}"
-      dur="{DUR}s" repeatCount="indefinite"
-      calcMode="spline" keySplines="0 0 1 1; .15 .6 .3 1"/>
-    <animate attributeName="y"
-      values="-2; -2; {dy-2}"
-      keyTimes="{kts(0, t_jolt, t_fade)}"
-      dur="{DUR}s" repeatCount="indefinite"
-      calcMode="spline" keySplines="0 0 1 1; .15 .6 .3 1"/>
-    <animate attributeName="opacity"
-      values="0; 0; 1; 0"
-      keyTimes="{kts(0, t_jolt, t_burst, t_fade)}"
-      dur="{DUR}s" repeatCount="indefinite"
-      calcMode="spline" keySplines="0 0 1 1; .1 .9 .2 1; .4 0 1 1"/>
-    <animateTransform attributeName="transform" type="scale"
-      values="0; 1; 0.3"
-      keyTimes="{kts(t_jolt - 0.05 if t_jolt > 0.05 else 0, t_burst, t_fade)}"
-      dur="{DUR}s" repeatCount="indefinite"
-      calcMode="spline" keySplines=".1 .9 .2 1; .4 0 1 1"/>
-  </rect>""")
-
-    # BUBBLES — drift up *after* eating, like digestive burp
-    if t0 > 0.5:
-        for bx_end, by_end, r_start, b_offset in (
-            (-4, -28, 1.7, 0),
-            ( 5, -34, 1.4, 0.4),
-        ):
-            b_start = t_burst + b_offset
-            b_peak  = min(b_start + 0.4, 99.5)
-            b_end   = min(t_bub + b_offset, 99.95)
-            parts.append(f"""
-  <circle cx="0" cy="-4" r="0" fill="{WBLUE}">
-    <animate attributeName="cx"
-      values="0; 0; {bx_end}"
-      keyTimes="0; {kt(b_start)}; {kt(b_end)}"
-      dur="{DUR}s" repeatCount="indefinite"/>
-    <animate attributeName="cy"
-      values="-4; -4; {by_end}"
-      keyTimes="0; {kt(b_start)}; {kt(b_end)}"
-      dur="{DUR}s" repeatCount="indefinite"
-      calcMode="spline" keySplines="0 0 1 1; .2 .1 .25 1"/>
-    <animate attributeName="r"
-      values="0; {r_start}; 0.2"
-      keyTimes="0; {kt(b_start)}; {kt(b_end)}"
-      dur="{DUR}s" repeatCount="indefinite"/>
-    <animate attributeName="opacity"
-      values="0; 0.9; 0"
-      keyTimes="0; {kt(b_peak)}; {kt(b_end)}"
-      dur="{DUR}s" repeatCount="indefinite"/>
+      calcMode="spline" keySplines="0 0 1 1; .1 .9 .2 1; .3 0 1 1"/>
   </circle>""")
 
     parts.append("</g>")
@@ -263,18 +205,10 @@ flip_t, flip_v = flip_keytimes_and_values()
 flip_kts  = ";".join(f"{x:.5f}" for x in flip_t)
 flip_vals = "; ".join(f"{v} 1" for v in flip_v)
 
-# ── Docker Moby whale symbol ──────────────────────────────────────────────────
-#
-#  viewBox 0 0 44 24.  Mouth at (42, 16).
-#  Body wrapped in a swallow-pulse group that scales (1.05, 0.92) on a 0.55 s
-#  loop — synced with the mouth chomp.  Tail flukes stay outside the pulse
-#  group (they have their own wag animation).
-#
+# ── Docker Moby whale ─────────────────────────────────────────────────────────
 WV, WHV = 44, 24
 
 whale = f"""<symbol id="wh" viewBox="0 0 {WV} {WHV}" overflow="visible">
-
-  <!-- UPPER tail fluke (wags) -->
   <path d="M11 10 L0 4 L4 14 Z" fill="{WBLUE}">
     <animate attributeName="d"
       values="M11 10 L0 4 L4 14 Z;
@@ -286,8 +220,6 @@ whale = f"""<symbol id="wh" viewBox="0 0 {WV} {WHV}" overflow="visible">
       calcMode="spline"
       keySplines=".4 0 .6 1; .4 0 .6 1; .4 0 .6 1; .4 0 .6 1"/>
   </path>
-
-  <!-- LOWER tail fluke (wags in sync) -->
   <path d="M11 16 L0 20 L4 12 Z" fill="{WBLUE}">
     <animate attributeName="d"
       values="M11 16 L0 20 L4 12 Z;
@@ -299,8 +231,6 @@ whale = f"""<symbol id="wh" viewBox="0 0 {WV} {WHV}" overflow="visible">
       calcMode="spline"
       keySplines=".4 0 .6 1; .4 0 .6 1; .4 0 .6 1; .4 0 .6 1"/>
   </path>
-
-  <!-- BODY GROUP: scales around (24,14) for swallow-pulse -->
   <g transform="translate(24,14)">
     <animateTransform attributeName="transform" type="scale" additive="sum"
       values="1 1; 1.05 0.92; 1 1"
@@ -308,21 +238,13 @@ whale = f"""<symbol id="wh" viewBox="0 0 {WV} {WHV}" overflow="visible">
       dur="0.55s" repeatCount="indefinite"
       calcMode="spline" keySplines=".3 .8 .5 1; .3 .8 .5 1"/>
     <g transform="translate(-24,-14)">
-
-      <!-- body -->
       <ellipse cx="24" cy="14" rx="16" ry="10" fill="{WBLUE}"/>
-
-      <!-- containers -->
       <rect x="13" y="2" width="9" height="9" rx="2" fill="white" opacity="0.94"/>
       <rect x="24" y="2" width="9" height="9" rx="2" fill="white" opacity="0.94"/>
       <line x1="17.5" y1="2" x2="17.5" y2="11" stroke="{WBLUE}" stroke-width="1.2"/>
       <line x1="28.5" y1="2" x2="28.5" y2="11" stroke="{WBLUE}" stroke-width="1.2"/>
-
-      <!-- eye -->
       <circle cx="38"   cy="12" r="2.8" fill="white"/>
       <circle cx="37.5" cy="12" r="1.2" fill="#080d17"/>
-
-      <!-- UPPER JAW (chomp) -->
       <path stroke="#080d17" stroke-width="0.8" fill="#080d17" opacity="0.95"
             d="M37 16 Q40 16 43 16 L42 16 Z">
         <animate attributeName="d"
@@ -335,7 +257,6 @@ whale = f"""<symbol id="wh" viewBox="0 0 {WV} {WHV}" overflow="visible">
           calcMode="spline"
           keySplines=".3 .8 .5 1; .3 .8 .5 1; .3 .8 .5 1; .3 .8 .5 1"/>
       </path>
-      <!-- LOWER JAW (chomp) -->
       <path stroke="#080d17" stroke-width="0.8" fill="#080d17" opacity="0.95"
             d="M37 17 Q40 17 43 17 L42 17 Z">
         <animate attributeName="d"
@@ -348,19 +269,15 @@ whale = f"""<symbol id="wh" viewBox="0 0 {WV} {WHV}" overflow="visible">
           calcMode="spline"
           keySplines=".3 .8 .5 1; .3 .8 .5 1; .3 .8 .5 1; .3 .8 .5 1"/>
       </path>
-
-      <!-- blow-hole spout -->
       <path d="M21 -1 Q22.5 -6 24 -1 Q25.5 -6 27 -1"
         stroke="{WBLUE}" stroke-width="2.4" fill="none" stroke-linecap="round">
         <animate attributeName="opacity" values="0.5; 1; 0.5" dur="1.1s" repeatCount="indefinite"/>
         <animate attributeName="stroke-width" values="2; 3.6; 2" dur="1.1s" repeatCount="indefinite"/>
       </path>
-
     </g>
   </g>
 </symbol>"""
 
-# Whale glow filter — subtle cyan outer glow so the whale stands out
 glow_filter = """<filter id="wglow" x="-30%" y="-30%" width="160%" height="160%">
   <feGaussianBlur stdDeviation="0.9" result="b"/>
   <feMerge>
@@ -369,9 +286,7 @@ glow_filter = """<filter id="wglow" x="-30%" y="-30%" width="160%" height="160%"
   </feMerge>
 </filter>"""
 
-# ── assemble final SVG ─────────────────────────────────────────────────────────
-# Use offset positions the MOUTH (viewBox 42, 16) at the path point (0, 0).
-
+# ── assemble SVG ───────────────────────────────────────────────────────────────
 svg = f"""<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
   viewBox="0 0 {W} {H}" width="{W}" height="{H}">
 <defs>
