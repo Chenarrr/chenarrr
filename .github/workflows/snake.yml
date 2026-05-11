@@ -16,7 +16,7 @@ jobs:
       - name: Generate whale animation
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          USERNAME: chenarrr
+          GITHUB_USERNAME: chenarrr
         run: python3 scripts/whale_animation.py
 
       - uses: crazy-max/ghaction-github-pages@v3

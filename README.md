@@ -45,7 +45,7 @@
 
 <br/><br/>
 
-<img src="https://raw.githubusercontent.com/Chenarrr/chenarrr/output/snake.svg" alt="Contribution Snake" />
+<img src="https://raw.githubusercontent.com/Chenarrr/chenarrr/output/snake.svg" alt="Docker whale contribution animation" />
 
 </div>
 

@@ -1,40 +1,37 @@
 #!/usr/bin/env python3
 """
-Docker Moby whale contribution animation — v5 "real eating, clear trail".
+Docker Moby-style contribution animation — v6 "smooth bite trail".
 
-The key fix from v4: eaten cells transition to the EMPTY-cell colour
-(#1e2d45) instead of going to opacity 0.  Just like the original snake
-animation, this leaves a clearly visible trail of consumed contributions
-behind the whale, so you can SEE what's been eaten.
-
-Stripped most visual noise (shards, bubbles, shock-wave) — they were
-drowning out the actual eating.  Kept only what makes the bite obvious:
-  • cell pops to 1.4× briefly when bitten
-  • fill colour transitions to empty (visible trail)
-  • small white flash at the bite moment
-  • everything else (whale flips, jaws, tail wag, body swallow, glow) stays
+The animation keeps the clear consumed-cell trail from v5, then adds a more
+polished whale and a controlled crimson bite mark for large contribution days.
+The red effect is intentionally limited to high-value cells so it feels like a
+reward moment instead of visual noise.
 """
 
 import os, json, urllib.request
 
 TOKEN = os.environ["GITHUB_TOKEN"]
-USER  = os.environ.get("USERNAME", "chenarrr")
+USER  = os.environ.get("GITHUB_USERNAME", "chenarrr")
 
 # ── visuals ────────────────────────────────────────────────────────────────────
-BG     = "#090f1a"
+BG     = "#070d16"
 EMPTY  = "#1e2d45"                                  # what eaten cells become
 LEVELS = [EMPTY, "#0e4d8a", "#0077b6", "#0096c7", "#00D4FF"]
 WBLUE  = "#2496ED"
+WBLUE2 = "#39B6FF"
+INK    = "#08111f"
+CRIMSON = "#ff285a"
+CRIMSON_DARK = "#9f1239"
 
 CELL  = 11
-GAP   = 2
+GAP   = 3
 STEP  = CELL + GAP
 COLS  = 52
 ROWS  = 7
-PADX  = 18
-PADY  = 38
+PADX  = 46
+PADY  = 56
 W     = COLS * STEP + PADX * 2
-H     = ROWS * STEP + PADY + PADX + 8
+H     = ROWS * STEP + PADY + 40
 DUR   = 50           # slightly slower so eating is more readable
 HALF  = CELL / 2
 
@@ -88,6 +85,47 @@ path_d = "M " + " L ".join(f"{cx(c):.2f},{cy(r):.2f}" for c, r in path_cells)
 
 def kt(p):    return f"{min(max(p / 100, 0), 1):.5f}"
 def kts(*ps): return ";".join(kt(p) for p in ps)
+
+def bite_splash(lvl, pc, pr, t_pop, t_eat):
+    """Return a smooth crimson bite mark for larger contribution cells."""
+    if lvl < 3:
+        return ""
+
+    angle = ((pc * 19 + pr * 31) % 76) - 38
+    mirror = -1 if (pc + pr) % 2 else 1
+    tint = CRIMSON if lvl == 4 else "#ef3155"
+    tint_dark = CRIMSON_DARK if lvl == 4 else "#881337"
+    peak = 0.82 if lvl == 4 else 0.52
+    hold = 0.62 if lvl == 4 else 0.34
+    t_set = min(t_eat + 1.45, 99.99)
+    drop_a = 7 + (pc % 3)
+    drop_b = 5 + (pr % 3)
+    drop_c = 4 + ((pc + pr) % 3)
+
+    return f"""
+  <g filter="url(#crimsonSoft)" opacity="0">
+    <animate attributeName="opacity"
+      values="0; 0; {peak}; {hold}; {hold}"
+      keyTimes="0; {kt(t_pop)}; {kt(t_eat)}; {kt(t_set)}; 1"
+      dur="{DUR}s" repeatCount="indefinite"
+      calcMode="spline"
+      keySplines="0 0 1 1; .08 .8 .2 1; .35 0 .75 1; 0 0 1 1"/>
+    <g transform="rotate({angle}) scale({mirror},1)">
+      <animateTransform attributeName="transform" type="scale" additive="sum"
+        values="0.22; 0.22; 1.24; 1; 1"
+        keyTimes="0; {kt(t_pop)}; {kt(t_eat)}; {kt(t_set)}; 1"
+        dur="{DUR}s" repeatCount="indefinite"
+        calcMode="spline"
+        keySplines="0 0 1 1; .12 .92 .22 1; .35 0 .75 1; 0 0 1 1"/>
+      <path d="M-5 -2 C-11 -6 -13 2 -8 5 C-4 9 2 6 7 8 C11 9 13 5 10 2 C7 -2 0 1 -5 -2 Z"
+        fill="{tint}" opacity="0.74"/>
+      <path d="M-2 1 C-6 -1 -8 4 -4 6 C0 8 5 5 7 3 C3 4 1 2 -2 1 Z"
+        fill="{tint_dark}" opacity="0.45"/>
+      <circle cx="{drop_a}" cy="-7" r="2.2" fill="{tint}" opacity="0.7"/>
+      <circle cx="-{drop_b}" cy="8" r="1.7" fill="{tint_dark}" opacity="0.58"/>
+      <circle cx="{drop_c}" cy="9" r="1.35" fill="{tint}" opacity="0.5"/>
+    </g>
+  </g>"""
 
 # ── cells ──────────────────────────────────────────────────────────────────────
 cells_svg = []
@@ -179,6 +217,9 @@ for idx, (pc, pr) in enumerate(path_cells):
 
     parts.append(f"    </rect>{idle_close}")
 
+    # Smooth crimson bite mark for bigger contribution days.
+    parts.append(bite_splash(lvl, pc, pr, t_pop, t_eat))
+
     # SMALL WHITE FLASH at the moment of bite
     if t0 > 0.3:
         f_t0   = t0
@@ -220,73 +261,99 @@ flip_kts  = ";".join(f"{x:.5f}" for x in flip_t)
 flip_vals = "; ".join(f"{v} 1" for v in flip_v)
 
 # ── Docker Moby whale ─────────────────────────────────────────────────────────
-WV, WHV = 44, 24
+WV, WHV = 62, 38
 
 whale = f"""<symbol id="wh" viewBox="0 0 {WV} {WHV}" overflow="visible">
-  <path d="M11 10 L0 4 L4 14 Z" fill="{WBLUE}">
+  <ellipse cx="28" cy="33" rx="24" ry="3.2" fill="#020814" opacity="0.36"/>
+
+  <path d="M14 19 L1 8 L5 20 Z" fill="{WBLUE}">
     <animate attributeName="d"
-      values="M11 10 L0 4 L4 14 Z;
-              M11 10 L0 1 L4 14 Z;
-              M11 10 L0 4 L4 14 Z;
-              M11 10 L0 7 L4 14 Z;
-              M11 10 L0 4 L4 14 Z"
-      dur="0.8s" repeatCount="indefinite"
+      values="M14 19 L1 8 L5 20 Z;
+              M14 19 L1 4 L5 20 Z;
+              M14 19 L1 8 L5 20 Z;
+              M14 19 L1 12 L5 20 Z;
+              M14 19 L1 8 L5 20 Z"
+      dur="0.82s" repeatCount="indefinite"
       calcMode="spline"
       keySplines=".4 0 .6 1; .4 0 .6 1; .4 0 .6 1; .4 0 .6 1"/>
   </path>
-  <path d="M11 16 L0 20 L4 12 Z" fill="{WBLUE}">
+  <path d="M14 22 L1 30 L5 18 Z" fill="{WBLUE}">
     <animate attributeName="d"
-      values="M11 16 L0 20 L4 12 Z;
-              M11 16 L0 17 L4 12 Z;
-              M11 16 L0 20 L4 12 Z;
-              M11 16 L0 23 L4 12 Z;
-              M11 16 L0 20 L4 12 Z"
-      dur="0.8s" repeatCount="indefinite"
+      values="M14 22 L1 30 L5 18 Z;
+              M14 22 L1 25 L5 18 Z;
+              M14 22 L1 30 L5 18 Z;
+              M14 22 L1 34 L5 18 Z;
+              M14 22 L1 30 L5 18 Z"
+      dur="0.82s" repeatCount="indefinite"
       calcMode="spline"
       keySplines=".4 0 .6 1; .4 0 .6 1; .4 0 .6 1; .4 0 .6 1"/>
   </path>
-  <g transform="translate(24,14)">
+
+  <g transform="translate(31,21)">
     <animateTransform attributeName="transform" type="scale" additive="sum"
-      values="1 1; 1.05 0.92; 1 1"
-      keyTimes="0; 0.4; 1"
-      dur="0.55s" repeatCount="indefinite"
-      calcMode="spline" keySplines=".3 .8 .5 1; .3 .8 .5 1"/>
-    <g transform="translate(-24,-14)">
-      <ellipse cx="24" cy="14" rx="16" ry="10" fill="{WBLUE}"/>
-      <rect x="13" y="2" width="9" height="9" rx="2" fill="white" opacity="0.94"/>
-      <rect x="24" y="2" width="9" height="9" rx="2" fill="white" opacity="0.94"/>
-      <line x1="17.5" y1="2" x2="17.5" y2="11" stroke="{WBLUE}" stroke-width="1.2"/>
-      <line x1="28.5" y1="2" x2="28.5" y2="11" stroke="{WBLUE}" stroke-width="1.2"/>
-      <circle cx="38"   cy="12" r="2.8" fill="white"/>
-      <circle cx="37.5" cy="12" r="1.2" fill="#080d17"/>
-      <path stroke="#080d17" stroke-width="0.8" fill="#080d17" opacity="0.95"
-            d="M37 16 Q40 16 43 16 L42 16 Z">
+      values="1 1; 1.08 0.91; 1 1"
+      keyTimes="0; 0.42; 1"
+      dur="0.62s" repeatCount="indefinite"
+      calcMode="spline" keySplines=".25 .85 .45 1; .25 .85 .45 1"/>
+    <g transform="translate(-31,-21)">
+      <path d="M10 22 C11 12 20 7 34 8 C48 9 57 15 58 22 C55 31 43 35 27 33 C17 32 10 28 10 22 Z"
+        fill="{WBLUE}"/>
+      <path d="M14 25 C23 32 43 32 55 24 C51 32 39 36 26 34 C17 33 12 29 14 25 Z"
+        fill="{WBLUE2}" opacity="0.42"/>
+      <path d="M16 14 C23 8 39 8 49 13" stroke="#80d9ff" stroke-width="1.6"
+        fill="none" opacity="0.6" stroke-linecap="round"/>
+
+      <g opacity="0.96">
+        <rect x="18" y="5" width="7" height="6" rx="1.2" fill="#eaf7ff"/>
+        <rect x="26" y="5" width="7" height="6" rx="1.2" fill="#eaf7ff"/>
+        <rect x="34" y="5" width="7" height="6" rx="1.2" fill="#eaf7ff"/>
+        <rect x="22" y="0" width="7" height="6" rx="1.2" fill="#cdefff"/>
+        <rect x="30" y="0" width="7" height="6" rx="1.2" fill="#cdefff"/>
+        <line x1="21.5" y1="5" x2="21.5" y2="11" stroke="{WBLUE}" stroke-width="1"/>
+        <line x1="29.5" y1="5" x2="29.5" y2="11" stroke="{WBLUE}" stroke-width="1"/>
+        <line x1="37.5" y1="5" x2="37.5" y2="11" stroke="{WBLUE}" stroke-width="1"/>
+      </g>
+
+      <circle cx="49.8" cy="17.2" r="3.1" fill="white"/>
+      <circle cx="50.6" cy="17.5" r="1.22" fill="{INK}"/>
+      <path d="M46 14 Q50 11 54 14" stroke="{INK}" stroke-width="1.2"
+        fill="none" opacity="0.45" stroke-linecap="round"/>
+
+      <path d="M47 21 Q54 20 61 20 L61 22 Q54 22 47 22 Z" fill="{INK}">
         <animate attributeName="d"
-          values="M37 16 Q40 16 43 16 L42 16 Z;
-                  M37 16 Q40 11 43 14 L42 16 Z;
-                  M37 16 Q40 16 43 16 L42 16 Z;
-                  M37 16 Q40 11 43 14 L42 16 Z;
-                  M37 16 Q40 16 43 16 L42 16 Z"
-          dur="0.55s" repeatCount="indefinite"
+          values="M47 21 Q54 20 61 20 L61 22 Q54 22 47 22 Z;
+                  M47 21 Q54 14 61 16 L61 22 Q54 22 47 22 Z;
+                  M47 21 Q54 20 61 20 L61 22 Q54 22 47 22 Z;
+                  M47 21 Q54 14 61 16 L61 22 Q54 22 47 22 Z;
+                  M47 21 Q54 20 61 20 L61 22 Q54 22 47 22 Z"
+          dur="0.58s" repeatCount="indefinite"
           calcMode="spline"
-          keySplines=".3 .8 .5 1; .3 .8 .5 1; .3 .8 .5 1; .3 .8 .5 1"/>
+          keySplines=".22 .86 .38 1; .28 0 .72 1; .22 .86 .38 1; .28 0 .72 1"/>
       </path>
-      <path stroke="#080d17" stroke-width="0.8" fill="#080d17" opacity="0.95"
-            d="M37 17 Q40 17 43 17 L42 17 Z">
+      <path d="M47 23 Q54 24 61 24 L61 22 Q54 22 47 22 Z" fill="{INK}">
         <animate attributeName="d"
-          values="M37 17 Q40 17 43 17 L42 17 Z;
-                  M37 17 Q40 22 43 19 L42 17 Z;
-                  M37 17 Q40 17 43 17 L42 17 Z;
-                  M37 17 Q40 22 43 19 L42 17 Z;
-                  M37 17 Q40 17 43 17 L42 17 Z"
-          dur="0.55s" repeatCount="indefinite"
+          values="M47 23 Q54 24 61 24 L61 22 Q54 22 47 22 Z;
+                  M47 23 Q54 30 61 27 L61 22 Q54 22 47 22 Z;
+                  M47 23 Q54 24 61 24 L61 22 Q54 22 47 22 Z;
+                  M47 23 Q54 30 61 27 L61 22 Q54 22 47 22 Z;
+                  M47 23 Q54 24 61 24 L61 22 Q54 22 47 22 Z"
+          dur="0.58s" repeatCount="indefinite"
           calcMode="spline"
-          keySplines=".3 .8 .5 1; .3 .8 .5 1; .3 .8 .5 1; .3 .8 .5 1"/>
+          keySplines=".22 .86 .38 1; .28 0 .72 1; .22 .86 .38 1; .28 0 .72 1"/>
       </path>
-      <path d="M21 -1 Q22.5 -6 24 -1 Q25.5 -6 27 -1"
-        stroke="{WBLUE}" stroke-width="2.4" fill="none" stroke-linecap="round">
-        <animate attributeName="opacity" values="0.5; 1; 0.5" dur="1.1s" repeatCount="indefinite"/>
-        <animate attributeName="stroke-width" values="2; 3.6; 2" dur="1.1s" repeatCount="indefinite"/>
+      <path d="M55 22 L58 23 L55 24 Z" fill="#f7fbff" opacity="0.86">
+        <animate attributeName="opacity" values="0.25; 0.86; 0.25" dur="0.58s" repeatCount="indefinite"/>
+      </path>
+
+      <path d="M29 -1 C28 -6 33 -6 32 -1 C33 -7 39 -5 36 0"
+        stroke="#96e7ff" stroke-width="2.2" fill="none" stroke-linecap="round">
+        <animate attributeName="d"
+          values="M29 -1 C28 -6 33 -6 32 -1 C33 -7 39 -5 36 0;
+                  M28 -1 C24 -9 34 -9 32 -1 C35 -10 43 -5 37 0;
+                  M29 -1 C28 -6 33 -6 32 -1 C33 -7 39 -5 36 0"
+          dur="1.25s" repeatCount="indefinite"
+          calcMode="spline" keySplines=".4 0 .6 1; .4 0 .6 1"/>
+        <animate attributeName="opacity" values="0.45; 1; 0.45" dur="1.25s" repeatCount="indefinite"/>
       </path>
     </g>
   </g>
@@ -300,12 +367,21 @@ glow_filter = """<filter id="wglow" x="-30%" y="-30%" width="160%" height="160%"
   </feMerge>
 </filter>"""
 
+crimson_filter = """<filter id="crimsonSoft" x="-90%" y="-90%" width="280%" height="280%">
+  <feGaussianBlur stdDeviation="0.35" result="soft"/>
+  <feMerge>
+    <feMergeNode in="soft"/>
+    <feMergeNode in="SourceGraphic"/>
+  </feMerge>
+</filter>"""
+
 # ── assemble SVG ───────────────────────────────────────────────────────────────
 svg = f"""<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
   viewBox="0 0 {W} {H}" width="{W}" height="{H}">
 <defs>
   {whale}
   {glow_filter}
+  {crimson_filter}
 </defs>
 <rect width="{W}" height="{H}" rx="8" fill="{BG}"/>
 
@@ -313,7 +389,7 @@ svg = f"""<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org
 
 <path id="wp" d="{path_d}" fill="none" visibility="hidden"/>
 
-<use href="#wh" width="{WV}" height="{WHV}" x="-42" y="-16" filter="url(#wglow)">
+<use href="#wh" width="{WV}" height="{WHV}" x="-60" y="-24" filter="url(#wglow)">
   <animateTransform attributeName="transform" type="scale"
     values="{flip_vals}" keyTimes="{flip_kts}"
     dur="{DUR}s" repeatCount="indefinite" additive="sum"/>
