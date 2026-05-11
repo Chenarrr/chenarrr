@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-Docker Moby-style contribution animation — v7 "Moby bite fade".
+Docker Moby-style contribution animation — v13 "polished tiny Moby".
 
 The animation keeps the clear consumed-cell trail from v5, then adds a more
 Docker-like Moby silhouette and a controlled crimson bite splash for large
-contribution days. The red effect blooms at the bite moment, then fades away
-smoothly so the graph stays readable.
+contribution days. Eaten cells now linger for a few whale steps before fading
+smoothly into the darker trail, so the wake feels less snappy.
 """
 
 import os, json, urllib.request
@@ -15,12 +15,16 @@ USER  = os.environ.get("GITHUB_USERNAME", "chenarrr")
 
 # ── visuals ────────────────────────────────────────────────────────────────────
 BG     = "#070d16"
-EMPTY  = "#1e2d45"                                  # what eaten cells become
+EMPTY  = "#1e2d45"
+TRAIL  = "#1a2840"                                  # soft in-between shade for the wake
+EATEN  = "#141f33"                                  # darker trail after the whale passes
 LEVELS = [EMPTY, "#0e4d8a", "#0077b6", "#0096c7", "#00D4FF"]
 WBLUE  = "#2496ED"
-WBLUE2 = "#5EC9FF"
-WBLUE3 = "#0db7ed"
+WBLUE2 = "#18B8EF"
+WBLUE3 = "#0A7FC2"
 INK    = "#08111f"
+OUTLINE = "#073553"
+BELLY = "#83d2f4"
 CRIMSON = "#ff285a"
 CRIMSON_DARK = "#9f1239"
 
@@ -39,7 +43,11 @@ HALF  = CELL / 2
 # Eating phases (% of DUR) — tight, all within whale's mouth window
 EAT_POP_PCT   = 0.10  # cell starts popping
 EAT_EAT_PCT   = 0.30  # peak pop, colour transitions
-EAT_DONE_PCT  = 0.55  # back to normal size, fully empty colour
+EAT_DONE_PCT  = 0.68  # back to normal size after a softer chew
+
+TRAIL_HOLD_CELLS = 1.35  # keep the bitten block bright just behind the whale
+TRAIL_SOFT_CELLS = 2.25  # fade through the middle shade
+TRAIL_DARK_CELLS = 3.10  # fully dark after about three more blocks
 
 FADE_IN_END_PCT = 2.0  # respawn colour fade at start of loop
 
@@ -82,10 +90,18 @@ for ri in range(ROWS):
     path_cells.extend((ci, ri) for ci in cols)
 
 n = len(path_cells)
+PATH_STEP_PCT = 100 / n
 path_d = "M " + " L ".join(f"{cx(c):.2f},{cy(r):.2f}" for c, r in path_cells)
 
 def kt(p):    return f"{min(max(p / 100, 0), 1):.5f}"
 def kts(*ps): return ";".join(kt(p) for p in ps)
+
+def trail_times(t_eat):
+    """Return delayed trail keyframes so a 3-cell wake follows the whale."""
+    t_hold = min(t_eat + PATH_STEP_PCT * TRAIL_HOLD_CELLS, 99.935)
+    t_soft = min(t_eat + PATH_STEP_PCT * TRAIL_SOFT_CELLS, 99.965)
+    t_dark = min(t_eat + PATH_STEP_PCT * TRAIL_DARK_CELLS, 99.990)
+    return t_hold, t_soft, t_dark
 
 def bite_splash(lvl, pc, pr, t_pop, t_eat):
     """Return a crimson bite splash that appears, drifts, and fades away."""
@@ -152,21 +168,23 @@ for idx, (pc, pr) in enumerate(path_cells):
     t_pop  = min(t0 + EAT_POP_PCT,  99.85)
     t_eat  = min(t0 + EAT_EAT_PCT,  99.92)
     t_done = min(t0 + EAT_DONE_PCT, 99.98)
+    t_hold, t_soft, t_dark = trail_times(t_eat)
 
     parts = [f'<g transform="translate({ox:.2f},{oy:.2f})">']
 
     # GLOW HALO — level-4 cells only.  Nested groups:
-    #   outer <g> opacity animates 1→0 at eating time (always monotonic)
+    #   outer <g> opacity trails 1→0 after the whale has moved on
     #   inner <rect> opacity pulses on its own 2.5 s loop (independent)
     # The two opacities multiply, so the pulse fades out smoothly when eaten.
     if lvl == 4:
         parts.append(f"""
   <g>
     <animate attributeName="opacity"
-      values="1; 1; 0"
-      keyTimes="0; {kt(t_pop)}; {kt(t_eat)}"
+      values="1; 1; 1; 0.45; 0; 0"
+      keyTimes="0; {kt(t_pop)}; {kt(t_hold)}; {kt(t_soft)}; {kt(t_dark)}; 1"
       dur="{DUR}s" repeatCount="indefinite"
-      calcMode="spline" keySplines="0 0 1 1; .4 0 1 1"/>
+      calcMode="spline"
+      keySplines="0 0 1 1; 0 0 1 1; .25 0 .65 1; .35 0 .8 1; 0 0 1 1"/>
     <rect x="-9" y="-9" width="18" height="18" rx="4" fill="{color}" opacity="0.4">
       <animate attributeName="opacity"
         values="0.3; 0.6; 0.3"
@@ -178,8 +196,8 @@ for idx, (pc, pr) in enumerate(path_cells):
 
     # ── cell rect ────────────────────────────────────────────────────────────
     # Two animations:
-    #   1. scale  — pop 1 → 1.4 → 1 (the "bite" motion)
-    #   2. fill   — colour → EMPTY (the trail of consumed cells)
+    #   1. scale  — pop 1 → 1.36 → 1 (the "bite" motion)
+    #   2. fill   — colour → TRAIL → EATEN (a delayed 3-cell wake)
 
     # idle pulse only on non-empty cells (empty cells stay static)
     idle_open = idle_close = ""
@@ -196,32 +214,32 @@ for idx, (pc, pr) in enumerate(path_cells):
     parts.append(f"""{idle_open}
     <rect x="-{HALF}" y="-{HALF}" width="{CELL}" height="{CELL}" rx="2" fill="{color}">
       <animateTransform attributeName="transform" type="scale"
-        values="1; 1; 1.45; 1; 1"
+        values="1; 1; 1.36; 1.03; 1"
         keyTimes="{kts(0, t0, t_pop, t_eat, t_done)}"
         dur="{DUR}s" repeatCount="indefinite"
         calcMode="spline"
-        keySplines="0 0 1 1; .1 .9 .3 1; .3 0 .7 1; 0 0 1 1"/>""")
+        keySplines="0 0 1 1; .12 .88 .28 1; .22 0 .62 1; .25 0 .7 1"/>""")
 
     # fill colour change — only meaningful for non-empty cells.
     # For non-empty cells with t0 > fade-in window, the cell colour fades back
-    # from EMPTY → its level colour at the start of each loop (respawn).
+    # from EATEN → its level colour at the start of each loop (respawn).
     if not is_empty:
         if t0 > FADE_IN_END_PCT:
             parts.append(f"""
       <animate attributeName="fill"
-        values="{EMPTY}; {color}; {color}; {color}; {EMPTY}; {EMPTY}"
-        keyTimes="0; {kt(FADE_IN_END_PCT)}; {kt(t0)}; {kt(t_pop)}; {kt(t_eat)}; 1"
+        values="{EATEN}; {color}; {color}; {color}; {color}; {color}; {TRAIL}; {EATEN}; {EATEN}"
+        keyTimes="0; {kt(FADE_IN_END_PCT)}; {kt(t0)}; {kt(t_pop)}; {kt(t_eat)}; {kt(t_hold)}; {kt(t_soft)}; {kt(t_dark)}; 1"
         dur="{DUR}s" repeatCount="indefinite"
         calcMode="spline"
-        keySplines=".4 0 .8 1; 0 0 1 1; 0 0 1 1; .2 0 .8 1; 0 0 1 1"/>""")
+        keySplines=".4 0 .8 1; 0 0 1 1; 0 0 1 1; 0 0 1 1; 0 0 1 1; .25 0 .65 1; .35 0 .8 1; 0 0 1 1"/>""")
         else:
             parts.append(f"""
       <animate attributeName="fill"
-        values="{color}; {color}; {color}; {EMPTY}; {EMPTY}"
-        keyTimes="0; {kt(t0)}; {kt(t_pop)}; {kt(t_eat)}; 1"
+        values="{color}; {color}; {color}; {color}; {color}; {TRAIL}; {EATEN}; {EATEN}"
+        keyTimes="0; {kt(t0)}; {kt(t_pop)}; {kt(t_eat)}; {kt(t_hold)}; {kt(t_soft)}; {kt(t_dark)}; 1"
         dur="{DUR}s" repeatCount="indefinite"
         calcMode="spline"
-        keySplines="0 0 1 1; 0 0 1 1; .2 0 .8 1; 0 0 1 1"/>""")
+        keySplines="0 0 1 1; 0 0 1 1; 0 0 1 1; 0 0 1 1; .25 0 .65 1; .35 0 .8 1; 0 0 1 1"/>""")
 
     parts.append(f"    </rect>{idle_close}")
 
@@ -269,119 +287,151 @@ flip_kts  = ";".join(f"{x:.5f}" for x in flip_t)
 flip_vals = "; ".join(f"{v} 1" for v in flip_v)
 
 # ── Docker Moby whale ─────────────────────────────────────────────────────────
-WV, WHV = 90, 58
-W_RENDER, H_RENDER = 76, 49
+WV, WHV = 100, 72
+W_RENDER, H_RENDER = 52, 38
 
 container_rows = f"""
-      <g fill="#dff7ff" stroke="#0b8fca" stroke-width="1.15" opacity="0.98">
-        <rect x="28" y="16" width="9" height="8" rx="1.2"/>
-        <rect x="38" y="16" width="9" height="8" rx="1.2"/>
-        <rect x="48" y="16" width="9" height="8" rx="1.2"/>
-        <rect x="58" y="16" width="9" height="8" rx="1.2"/>
-
-        <rect x="23" y="25" width="9" height="8" rx="1.2"/>
-        <rect x="33" y="25" width="9" height="8" rx="1.2"/>
-        <rect x="43" y="25" width="9" height="8" rx="1.2"/>
-        <rect x="53" y="25" width="9" height="8" rx="1.2"/>
-        <rect x="63" y="25" width="9" height="8" rx="1.2"/>
-
-        <rect x="38" y="7" width="9" height="8" rx="1.2"/>
+      <g transform="rotate(-4 55 24)">
+      <g fill="{WBLUE2}" stroke="{OUTLINE}" stroke-width="2" opacity="0.98">
+        <rect x="45" y="14" width="10" height="9" rx="2"/>
+        <rect x="56" y="14" width="10" height="9" rx="2"/>
+        <rect x="34" y="25" width="10" height="9" rx="2"/>
+        <rect x="45" y="25" width="10" height="9" rx="2"/>
+        <rect x="56" y="25" width="10" height="9" rx="2"/>
       </g>
-      <g stroke="{WBLUE}" stroke-width="0.9" opacity="0.72">
-        <line x1="32.5" y1="16" x2="32.5" y2="24"/>
-        <line x1="42.5" y1="16" x2="42.5" y2="24"/>
-        <line x1="52.5" y1="16" x2="52.5" y2="24"/>
-        <line x1="62.5" y1="16" x2="62.5" y2="24"/>
-        <line x1="27.5" y1="25" x2="27.5" y2="33"/>
-        <line x1="37.5" y1="25" x2="37.5" y2="33"/>
-        <line x1="47.5" y1="25" x2="47.5" y2="33"/>
-        <line x1="57.5" y1="25" x2="57.5" y2="33"/>
-        <line x1="67.5" y1="25" x2="67.5" y2="33"/>
-        <line x1="42.5" y1="7" x2="42.5" y2="15"/>
+      <g stroke="{OUTLINE}" stroke-width="1.2" opacity="0.85">
+        <line x1="50" y1="14" x2="50" y2="23"/>
+        <line x1="61" y1="14" x2="61" y2="23"/>
+        <line x1="39" y1="25" x2="39" y2="34"/>
+        <line x1="50" y1="25" x2="50" y2="34"/>
+        <line x1="61" y1="25" x2="61" y2="34"/>
+      </g>
       </g>
 """
 
 whale = f"""<symbol id="wh" viewBox="0 0 {WV} {WHV}" overflow="visible">
-  <ellipse cx="43" cy="52" rx="34" ry="4.2" fill="#020814" opacity="0.34"/>
+  <ellipse cx="45" cy="66" rx="31" ry="4.2" fill="#020814" opacity="0.2"/>
 
-  <g transform="translate(45,35)">
+  <g transform="translate(48,45)">
     <animateTransform attributeName="transform" type="scale" additive="sum"
-      values="1 1; 1.035 0.965; 1 1"
+      values="1 1; 1.015 0.985; 1 1"
       keyTimes="0; 0.42; 1"
-      dur="0.7s" repeatCount="indefinite"
+      dur="1.15s" repeatCount="indefinite"
       calcMode="spline" keySplines=".25 .85 .45 1; .25 .85 .45 1"/>
-    <g transform="translate(-45,-35)">
-      <path d="M20 36 C13 29 7 27 1 21 C11 20 18 25 24 31 Z"
-        fill="{WBLUE}">
+    <g transform="translate(-48,-45)">
+      <path d="M22 42 C15 32 8 29 3 20 C13 19 22 26 27 37 Z"
+        fill="{WBLUE}" stroke="{OUTLINE}" stroke-width="3" stroke-linejoin="round">
         <animate attributeName="d"
-          values="M20 36 C13 29 7 27 1 21 C11 20 18 25 24 31 Z;
-                  M20 36 C12 26 6 22 1 15 C12 17 20 25 24 31 Z;
-                  M20 36 C13 29 7 27 1 21 C11 20 18 25 24 31 Z;
-                  M20 36 C12 32 7 36 1 41 C11 42 19 37 24 31 Z;
-                  M20 36 C13 29 7 27 1 21 C11 20 18 25 24 31 Z"
+          values="M22 42 C15 32 8 29 3 20 C13 19 22 26 27 37 Z;
+                  M22 42 C14 29 8 25 4 16 C15 17 24 26 27 37 Z;
+                  M22 42 C15 32 8 29 3 20 C13 19 22 26 27 37 Z;
+                  M22 42 C14 45 8 50 3 58 C15 58 24 49 27 37 Z;
+                  M22 42 C15 32 8 29 3 20 C13 19 22 26 27 37 Z"
           dur="0.86s" repeatCount="indefinite"
           calcMode="spline"
           keySplines=".4 0 .6 1; .4 0 .6 1; .4 0 .6 1; .4 0 .6 1"/>
       </path>
-      <path d="M20 39 C13 45 7 47 1 53 C12 53 19 47 24 42 Z"
-        fill="{WBLUE3}" opacity="0.94">
+      <path d="M24 43 C18 51 11 56 4 66 C17 66 27 55 29 43 Z"
+        fill="{WBLUE2}" stroke="{OUTLINE}" stroke-width="3" stroke-linejoin="round">
         <animate attributeName="d"
-          values="M20 39 C13 45 7 47 1 53 C12 53 19 47 24 42 Z;
-                  M20 39 C13 42 7 42 1 47 C11 49 18 46 24 42 Z;
-                  M20 39 C13 45 7 47 1 53 C12 53 19 47 24 42 Z;
-                  M20 39 C12 50 7 53 1 57 C13 57 21 49 24 42 Z;
-                  M20 39 C13 45 7 47 1 53 C12 53 19 47 24 42 Z"
+          values="M24 43 C18 51 11 56 4 66 C17 66 27 55 29 43 Z;
+                  M24 43 C17 48 11 50 5 58 C16 60 25 53 29 43 Z;
+                  M24 43 C18 51 11 56 4 66 C17 66 27 55 29 43 Z;
+                  M24 43 C17 57 10 62 4 69 C18 69 28 57 29 43 Z;
+                  M24 43 C18 51 11 56 4 66 C17 66 27 55 29 43 Z"
           dur="0.86s" repeatCount="indefinite"
           calcMode="spline"
           keySplines=".4 0 .6 1; .4 0 .6 1; .4 0 .6 1; .4 0 .6 1"/>
       </path>
 
-      <path d="M17 41 C18 27 33 19 55 20 C73 21 86 30 88 42 C83 52 65 57 43 55 C27 54 17 49 17 41 Z"
-        fill="{WBLUE}"/>
-      <path d="M21 44 C33 54 64 53 84 42 C78 53 61 58 42 56 C28 54 21 49 21 44 Z"
-        fill="{WBLUE2}" opacity="0.5"/>
-      <path d="M22 36 C30 23 48 20 66 24" stroke="#9de8ff" stroke-width="2"
-        fill="none" opacity="0.7" stroke-linecap="round"/>
+      <path d="M22 49 C22 32 38 24 59 25 C80 26 95 38 96 51 C95 64 78 71 55 69 C35 68 22 60 22 49 Z"
+        fill="{WBLUE}" stroke="{OUTLINE}" stroke-width="3" stroke-linejoin="round"/>
+      <path d="M30 56 C42 66 74 66 93 53 C87 65 70 72 53 70 C39 69 30 62 30 56 Z"
+        fill="{BELLY}" opacity="0.82"/>
+      <path d="M31 56 C44 64 74 64 91 54" stroke="#5bbfe8" stroke-width="1.5"
+        fill="none" opacity="0.65" stroke-linecap="round"/>
 
 {container_rows}
 
-      <circle cx="75" cy="35" r="3.2" fill="#f6fbff"/>
-      <circle cx="76.1" cy="35.4" r="1.22" fill="{INK}"/>
-      <path d="M70 31 Q75 27 80 31" stroke="{INK}" stroke-width="1.25"
-        fill="none" opacity="0.38" stroke-linecap="round"/>
+      <g transform="translate(62,47)">
+        <ellipse cx="0" cy="0" rx="7.7" ry="7.7" fill="#f7fbff" stroke="{OUTLINE}" stroke-width="1.9">
+          <animate attributeName="ry"
+            values="7.7; 7.7; 0.9; 7.7; 7.7"
+            keyTimes="0; 0.78; 0.82; 0.87; 1"
+            dur="3.8s" repeatCount="indefinite"
+            calcMode="spline"
+            keySplines="0 0 1 1; .2 .8 .3 1; .2 0 .8 1; 0 0 1 1"/>
+        </ellipse>
+        <g>
+          <animateTransform attributeName="transform" type="scale"
+            values="1 1; 1 1; 1 0.14; 1 1; 1 1"
+            keyTimes="0; 0.78; 0.82; 0.87; 1"
+            dur="3.8s" repeatCount="indefinite"
+            calcMode="spline"
+            keySplines="0 0 1 1; .2 .8 .3 1; .2 0 .8 1; 0 0 1 1"/>
+          <circle cx="3" cy="2.3" r="3" fill="{INK}"/>
+          <circle cx="1.8" cy="1" r="1.05" fill="#f7fbff" opacity="0.95"/>
+        </g>
+      </g>
+      <circle cx="77" cy="54.5" r="2.4" fill="#ff9fba" opacity="0.66"/>
 
-      <path d="M75 42 Q82 41 90 41 L90 43 Q82 43 75 43 Z" fill="{INK}">
+      <path d="M76 55 C82 61 90 61 95 55" stroke="{OUTLINE}" stroke-width="2"
+        fill="none" stroke-linecap="round">
         <animate attributeName="d"
-          values="M75 42 Q82 41 90 41 L90 43 Q82 43 75 43 Z;
-                  M75 42 Q82 34 90 36 L90 43 Q82 43 75 43 Z;
-                  M75 42 Q82 41 90 41 L90 43 Q82 43 75 43 Z;
-                  M75 42 Q82 34 90 36 L90 43 Q82 43 75 43 Z;
-                  M75 42 Q82 41 90 41 L90 43 Q82 43 75 43 Z"
-          dur="0.6s" repeatCount="indefinite"
+          values="M76 55 C82 61 90 61 95 55;
+                  M76 55 C83 62.5 91.5 62 95.5 56.5;
+                  M76 55 C82 61 90 61 95 55;
+                  M76 55 C83 62.5 91.5 62 95.5 56.5;
+                  M76 55 C82 61 90 61 95 55"
+          dur="1.05s" repeatCount="indefinite"
           calcMode="spline"
           keySplines=".22 .86 .38 1; .28 0 .72 1; .22 .86 .38 1; .28 0 .72 1"/>
       </path>
-      <path d="M75 44 Q82 45 90 45 L90 43 Q82 43 75 43 Z" fill="{INK}">
-        <animate attributeName="d"
-          values="M75 44 Q82 45 90 45 L90 43 Q82 43 75 43 Z;
-                  M75 44 Q82 51 90 49 L90 43 Q82 43 75 43 Z;
-                  M75 44 Q82 45 90 45 L90 43 Q82 43 75 43 Z;
-                  M75 44 Q82 51 90 49 L90 43 Q82 43 75 43 Z;
-                  M75 44 Q82 45 90 45 L90 43 Q82 43 75 43 Z"
-          dur="0.6s" repeatCount="indefinite"
+      <ellipse cx="86.5" cy="58.2" rx="2.7" ry="0.45" fill="#2b1020" opacity="0.16">
+        <animate attributeName="ry"
+          values="0.35; 1.15; 0.35; 1.15; 0.35"
+          dur="1.05s" repeatCount="indefinite"
+          calcMode="spline"
+          keySplines=".22 .86 .38 1; .28 0 .72 1; .22 .86 .38 1; .28 0 .72 1"/>
+        <animate attributeName="rx"
+          values="2.5; 3.25; 2.5; 3.25; 2.5"
+          dur="1.05s" repeatCount="indefinite"
+          calcMode="spline"
+          keySplines=".22 .86 .38 1; .28 0 .72 1; .22 .86 .38 1; .28 0 .72 1"/>
+        <animate attributeName="opacity"
+          values="0.14; 0.42; 0.14; 0.42; 0.14"
+          dur="1.05s" repeatCount="indefinite"
+          calcMode="spline"
+          keySplines=".22 .86 .38 1; .28 0 .72 1; .22 .86 .38 1; .28 0 .72 1"/>
+      </ellipse>
+      <path d="M88 56.2 L90.2 56.4 L89.2 58.3 Z" fill="#fff7fb" opacity="0.2">
+        <animate attributeName="opacity"
+          values="0.18; 0.62; 0.18; 0.62; 0.18"
+          dur="1.05s" repeatCount="indefinite"
           calcMode="spline"
           keySplines=".22 .86 .38 1; .28 0 .72 1; .22 .86 .38 1; .28 0 .72 1"/>
       </path>
-      <path d="M85 43 L88 44 L85 45 Z" fill="#f7fbff" opacity="0.82">
-        <animate attributeName="opacity" values="0.22; 0.82; 0.22" dur="0.6s" repeatCount="indefinite"/>
-      </path>
-
-      <path d="M43 5 C42 -1 48 -1 47 5 C50 -3 57 1 52 7"
-        stroke="#bff3ff" stroke-width="2.4" fill="none" stroke-linecap="round">
+      <path d="M84.8 59.1 C86.7 60.1 89 59.8 90.5 58.6" stroke="#ff8fab" stroke-width="1.05"
+        fill="none" stroke-linecap="round" opacity="0.34">
         <animate attributeName="d"
-          values="M43 5 C42 -1 48 -1 47 5 C50 -3 57 1 52 7;
-                  M42 5 C37 -5 50 -4 47 5 C53 -6 62 0 53 7;
-                  M43 5 C42 -1 48 -1 47 5 C50 -3 57 1 52 7"
+          values="M84.8 59.1 C86.7 60.1 89 59.8 90.5 58.6;
+                  M84.5 59.5 C86.8 60.6 90 60.1 91.4 58.8;
+                  M84.8 59.1 C86.7 60.1 89 59.8 90.5 58.6;
+                  M84.5 59.5 C86.8 60.6 90 60.1 91.4 58.8;
+                  M84.8 59.1 C86.7 60.1 89 59.8 90.5 58.6"
+          dur="1.05s" repeatCount="indefinite"
+          calcMode="spline"
+          keySplines=".22 .86 .38 1; .28 0 .72 1; .22 .86 .38 1; .28 0 .72 1"/>
+      </path>
+      <path d="M79 61 C84 64 91 63.5 94 60" stroke="#4fbce7" stroke-width="1.05"
+        fill="none" stroke-linecap="round" opacity="0.26"/>
+
+      <path d="M44 13 C43 5 51 5 50 13 C55 3 64 8 57 16"
+        stroke="#bff3ff" stroke-width="2.6" fill="none" stroke-linecap="round">
+        <animate attributeName="d"
+          values="M44 13 C43 5 51 5 50 13 C55 3 64 8 57 16;
+                  M43 13 C38 1 53 1 50 13 C58 0 69 8 58 16;
+                  M44 13 C43 5 51 5 50 13 C55 3 64 8 57 16"
           dur="1.25s" repeatCount="indefinite"
           calcMode="spline" keySplines=".4 0 .6 1; .4 0 .6 1"/>
         <animate attributeName="opacity" values="0.45; 1; 0.45" dur="1.25s" repeatCount="indefinite"/>
@@ -391,10 +441,17 @@ whale = f"""<symbol id="wh" viewBox="0 0 {WV} {WHV}" overflow="visible">
 </symbol>"""
 
 glow_filter = """<filter id="wglow" x="-30%" y="-30%" width="160%" height="160%">
-  <feGaussianBlur stdDeviation="0.9" result="b"/>
+  <feGaussianBlur stdDeviation="0.55" result="b"/>
   <feMerge>
     <feMergeNode in="b"/>
     <feMergeNode in="SourceGraphic"/>
+  </feMerge>
+</filter>"""
+
+shadow_filter = """<filter id="whaleShadow" x="-90%" y="-90%" width="280%" height="280%">
+  <feGaussianBlur stdDeviation="1.7" result="softShadow"/>
+  <feMerge>
+    <feMergeNode in="softShadow"/>
   </feMerge>
 </filter>"""
 
@@ -412,6 +469,7 @@ svg = f"""<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org
 <defs>
   {whale}
   {glow_filter}
+  {shadow_filter}
   {crimson_filter}
 </defs>
 <rect width="{W}" height="{H}" rx="8" fill="{BG}"/>
@@ -420,13 +478,25 @@ svg = f"""<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org
 
 <path id="wp" d="{path_d}" fill="none" visibility="hidden"/>
 
-<use href="#wh" width="{W_RENDER}" height="{H_RENDER}" x="-74" y="-36" filter="url(#wglow)">
+<g opacity="0.9">
+  <ellipse cx="-31" cy="8.8" rx="21" ry="5.2" fill="#02050d" opacity="0.62" filter="url(#whaleShadow)">
+    <animate attributeName="rx" values="19.5; 21.5; 19.5" keyTimes="0;0.5;1"
+      dur="1.8s" repeatCount="indefinite"
+      calcMode="spline" keySplines=".4 0 .6 1; .4 0 .6 1"/>
+  </ellipse>
+  <ellipse cx="-31" cy="8.2" rx="14.5" ry="2.35" fill="#000207" opacity="0.42"/>
+  <animateMotion dur="{DUR}s" repeatCount="indefinite" calcMode="linear">
+    <mpath href="#wp"/>
+  </animateMotion>
+</g>
+
+<use href="#wh" width="{W_RENDER}" height="{H_RENDER}" x="-51" y="-30" filter="url(#wglow)">
   <animateTransform attributeName="transform" type="scale"
     values="{flip_vals}" keyTimes="{flip_kts}"
     dur="{DUR}s" repeatCount="indefinite" additive="sum"/>
   <animateTransform attributeName="transform" type="translate"
-    values="0,-3; 0,3; 0,-3" keyTimes="0;0.5;1"
-    dur="1.8s" repeatCount="indefinite" additive="sum"
+    values="0,-0.9; 0,1.1; 0,-0.9" keyTimes="0;0.5;1"
+    dur="2.4s" repeatCount="indefinite" additive="sum"
     calcMode="spline" keySplines=".4 0 .6 1; .4 0 .6 1"/>
   <animateMotion dur="{DUR}s" repeatCount="indefinite" calcMode="linear">
     <mpath href="#wp"/>
