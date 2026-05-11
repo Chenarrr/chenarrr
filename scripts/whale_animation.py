@@ -101,19 +101,22 @@ for idx, (pc, pr) in enumerate(path_cells):
     oy    = cy(pr)
 
     t0     = idx / n * 100
-    t_pop  = min(t0 + EAT_POP_PCT,  99.5)
-    t_eat  = min(t0 + EAT_EAT_PCT,  99.7)
-    t_done = min(t0 + EAT_DONE_PCT, 99.9)
+    # Caps must stay strictly greater than max(t0)=99.725 for monotonic keyTimes
+    t_pop  = min(t0 + EAT_POP_PCT,  99.85)
+    t_eat  = min(t0 + EAT_EAT_PCT,  99.92)
+    t_done = min(t0 + EAT_DONE_PCT, 99.98)
 
     parts = [f'<g transform="translate({ox:.2f},{oy:.2f})">']
 
-    # GLOW HALO — only on level-4 cells, fades when eaten
-    if lvl == 4:
+    # GLOW HALO — only on level-4 cells with enough room for pulse before eating
+    if lvl == 4 and t0 > 0.8:
+        # last pulse keyTime is 0.6 — t_pop must be > that for monotonicity
+        t_glow_fade = max(t_pop - 0.05, 0.65)
         parts.append(f"""
   <rect x="-9" y="-9" width="18" height="18" rx="4" fill="{color}" opacity="0.3">
     <animate attributeName="opacity"
       values="0.25; 0.55; 0.3; 0.55; 0.25; 0"
-      keyTimes="0; 0.2; 0.4; 0.6; {kt(min(t_pop - 0.05, 99))}; {kt(t_eat)}"
+      keyTimes="0; 0.2; 0.4; 0.6; {kt(t_glow_fade)}; {kt(t_eat)}"
       dur="{DUR}s" repeatCount="indefinite"/>
   </rect>""")
 
