@@ -39,9 +39,6 @@
 
 <br/>
 
-<div align="center">
-
-<img src="https://streak-stats.demolab.com?user=chenarrr&theme=tokyonight-duo&hide_border=true&background=0d1117&stroke=00D4FF&ring=00D4FF&fire=ff6e6e&currStreakLabel=00D4FF" />
 
 <br/><br/>
 
