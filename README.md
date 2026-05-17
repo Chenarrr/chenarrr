@@ -2,7 +2,7 @@
 
 <div align="center">
 
-<img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=700&size=28&duration=4000&pause=1500&color=00D4FF&center=true&vCenter=true&width=620&lines=Hey%2C+I'm+Chenar+%F0%9F%91%8B;Full-Stack+%26+DevOps+Engineer;Kubernetes+%E2%80%A2+GitOps+%E2%80%A2+Cloud+Native;Self-hosting+everything+that+matters" alt="Typing SVG" />
+<img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=700&size=28&duration=3000&pause=2000&color=00D4FF&center=true&vCenter=true&width=620&lines=Chenar;DevOps" alt="Typing SVG" />
 
 <br/><br/>
 
