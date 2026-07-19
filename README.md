@@ -31,11 +31,6 @@
 
 <div align="center">
 
-<img height="170" src="https://github-readme-stats.vercel.app/api?username=Chenarrr&show_icons=true&hide_border=true&bg_color=0d1117&title_color=00D4FF&icon_color=00D4FF&text_color=c9d1d9&ring_color=00D4FF" alt="GitHub stats" />
-<img height="170" src="https://streak-stats.demolab.com?user=Chenarrr&hide_border=true&background=0d1117&ring=00D4FF&fire=00D4FF&currStreakLabel=00D4FF&sideLabels=c9d1d9&currStreakNum=c9d1d9&sideNums=c9d1d9&dates=8b949e" alt="GitHub streak" />
-
-<br/><br/>
-
 <img src="https://raw.githubusercontent.com/Chenarrr/chenarrr/output/snake.svg" alt="Docker whale eating my contribution graph" />
 
 </div>

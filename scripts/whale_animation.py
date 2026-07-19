@@ -290,20 +290,23 @@ flip_vals = "; ".join(f"{v} 1" for v in flip_v)
 WV, WHV = 100, 72
 W_RENDER, H_RENDER = 52, 38
 
-def _container(x, y, fill):
-    """One cargo container: crisp box with two plank lines, Docker-logo style."""
+def _container(x, y, fill, highlight):
+    """One cargo container with highlight strip — Docker logo style."""
     return f"""
-        <rect x="{x}" y="{y}" width="13" height="10" rx="1" fill="{fill}"
-          stroke="{OUTLINE}" stroke-width="1.7" stroke-linejoin="round"/>
-        <line x1="{x + 4.33:.2f}" y1="{y + 1.2}" x2="{x + 4.33:.2f}" y2="{y + 8.8}"
-          stroke="{OUTLINE}" stroke-width="1" opacity="0.75"/>
-        <line x1="{x + 8.66:.2f}" y1="{y + 1.2}" x2="{x + 8.66:.2f}" y2="{y + 8.8}"
-          stroke="{OUTLINE}" stroke-width="1" opacity="0.75"/>"""
+        <rect x="{x}" y="{y}" width="11" height="9" rx="1.5" fill="{fill}"
+          stroke="{OUTLINE}" stroke-width="1.4" stroke-linejoin="round"/>
+        <rect x="{x + 1.2}" y="{y + 1}" width="8.6" height="1.6" rx="0.6"
+          fill="{highlight}" opacity="0.35"/>
+        <line x1="{x + 3.67:.2f}" y1="{y + 1}" x2="{x + 3.67:.2f}" y2="{y + 8}"
+          stroke="{OUTLINE}" stroke-width="0.8" opacity="0.6"/>
+        <line x1="{x + 7.33:.2f}" y1="{y + 1}" x2="{x + 7.33:.2f}" y2="{y + 8}"
+          stroke="{OUTLINE}" stroke-width="0.8" opacity="0.6"/>"""
 
 container_rows = f"""
-      <g transform="rotate(-3 50 25)">
-{_container(44, 12.5, WBLUE2)}{_container(58, 12.5, WBLUE2)}
-{_container(30, 24, "#10A3DE")}{_container(44, 24, "#10A3DE")}{_container(58, 24, "#10A3DE")}
+      <g transform="translate(32, 16)">
+        <rect x="-2" y="8" width="42" height="3" rx="1" fill="{OUTLINE}" opacity="0.4"/>
+{_container(0, 0, WBLUE2, "#8eddff")}{_container(12.5, 0, WBLUE2, "#8eddff")}{_container(25, 0, WBLUE3, "#5bb8e0")}
+{_container(0, 10.5, "#10A3DE", "#6fd4ff")}{_container(12.5, 10.5, "#10A3DE", "#6fd4ff")}{_container(25, 10.5, WBLUE, "#8eddff")}{_container(37.5, 10.5, WBLUE3, "#5bb8e0")}
       </g>
 """
 
@@ -344,17 +347,19 @@ whale = f"""<symbol id="wh" viewBox="0 0 {WV} {WHV}" overflow="visible">
 
       <path d="M22 49 C22 32 38 24 59 25 C80 26 95 38 96 51 C95 64 78 71 55 69 C35 68 22 60 22 49 Z"
         fill="{WBLUE}" stroke="{OUTLINE}" stroke-width="3" stroke-linejoin="round"/>
-      <path d="M30 56 C42 66 74 66 93 53 C87 65 70 72 53 70 C39 69 30 62 30 56 Z"
-        fill="{BELLY}" opacity="0.82"/>
-      <path d="M31 56 C44 64 74 64 91 54" stroke="#5bbfe8" stroke-width="1.5"
-        fill="none" opacity="0.65" stroke-linecap="round"/>
+      <path d="M28 54 C40 65 72 66 92 53 C86 64 68 71 52 69 C38 68 30 62 28 54 Z"
+        fill="{BELLY}" opacity="0.72"/>
+      <path d="M30 55 C44 63 72 63 90 53" stroke="#9be5f9" stroke-width="1.2"
+        fill="none" opacity="0.5" stroke-linecap="round"/>
+      <path d="M38 30 C50 24 70 25 82 32" stroke="{WBLUE3}" stroke-width="2"
+        fill="none" opacity="0.45" stroke-linecap="round"/>
 
 {container_rows}
 
-      <g transform="translate(62,47)">
-        <ellipse cx="0" cy="0" rx="7.7" ry="7.7" fill="#f7fbff" stroke="{OUTLINE}" stroke-width="1.9">
+      <g transform="translate(60,46)">
+        <ellipse cx="0" cy="0" rx="8.2" ry="8.2" fill="#f7fbff" stroke="{OUTLINE}" stroke-width="1.9">
           <animate attributeName="ry"
-            values="7.7; 7.7; 0.9; 7.7; 7.7"
+            values="8.2; 8.2; 0.9; 8.2; 8.2"
             keyTimes="0; 0.78; 0.82; 0.87; 1"
             dur="3.8s" repeatCount="indefinite"
             calcMode="spline"
@@ -367,25 +372,26 @@ whale = f"""<symbol id="wh" viewBox="0 0 {WV} {WHV}" overflow="visible">
             dur="3.8s" repeatCount="indefinite"
             calcMode="spline"
             keySplines="0 0 1 1; .2 .8 .3 1; .2 0 .8 1; 0 0 1 1"/>
-          <circle cx="3" cy="2.3" r="3" fill="{INK}"/>
-          <circle cx="1.8" cy="1" r="1.05" fill="#f7fbff" opacity="0.95"/>
+          <circle cx="2.5" cy="1.8" r="3.4" fill="{INK}"/>
+          <circle cx="1.2" cy="0.2" r="1.3" fill="#f7fbff" opacity="0.95"/>
+          <circle cx="4" cy="3" r="0.7" fill="#f7fbff" opacity="0.5"/>
         </g>
       </g>
-      <circle cx="77" cy="54.5" r="2.4" fill="#ff9fba" opacity="0.66"/>
+      <circle cx="75" cy="53" r="2.8" fill="#ff9fba" opacity="0.55"/>
 
-      <path d="M76 55 C82 61 90 61 95 55" stroke="{OUTLINE}" stroke-width="2"
+      <path d="M74 54 C80 60 88 60 93 54" stroke="{OUTLINE}" stroke-width="2"
         fill="none" stroke-linecap="round">
         <animate attributeName="d"
-          values="M76 55 C82 61 90 61 95 55;
-                  M76 55 C83 62.5 91.5 62 95.5 56.5;
-                  M76 55 C82 61 90 61 95 55;
-                  M76 55 C83 62.5 91.5 62 95.5 56.5;
-                  M76 55 C82 61 90 61 95 55"
+          values="M74 54 C80 60 88 60 93 54;
+                  M74 54 C81 61.5 89.5 61 93.5 55.5;
+                  M74 54 C80 60 88 60 93 54;
+                  M74 54 C81 61.5 89.5 61 93.5 55.5;
+                  M74 54 C80 60 88 60 93 54"
           dur="1.05s" repeatCount="indefinite"
           calcMode="spline"
           keySplines=".22 .86 .38 1; .28 0 .72 1; .22 .86 .38 1; .28 0 .72 1"/>
       </path>
-      <ellipse cx="86.5" cy="58.2" rx="2.7" ry="0.45" fill="#2b1020" opacity="0.16">
+      <ellipse cx="84.5" cy="57.2" rx="2.7" ry="0.45" fill="#2b1020" opacity="0.16">
         <animate attributeName="ry"
           values="0.35; 1.15; 0.35; 1.15; 0.35"
           dur="1.05s" repeatCount="indefinite"
@@ -402,39 +408,59 @@ whale = f"""<symbol id="wh" viewBox="0 0 {WV} {WHV}" overflow="visible">
           calcMode="spline"
           keySplines=".22 .86 .38 1; .28 0 .72 1; .22 .86 .38 1; .28 0 .72 1"/>
       </ellipse>
-      <path d="M88 56.2 L90.2 56.4 L89.2 58.3 Z" fill="#fff7fb" opacity="0.2">
+      <path d="M86 55.2 L88.2 55.4 L87.2 57.3 Z" fill="#fff7fb" opacity="0.2">
         <animate attributeName="opacity"
           values="0.18; 0.62; 0.18; 0.62; 0.18"
           dur="1.05s" repeatCount="indefinite"
           calcMode="spline"
           keySplines=".22 .86 .38 1; .28 0 .72 1; .22 .86 .38 1; .28 0 .72 1"/>
       </path>
-      <path d="M84.8 59.1 C86.7 60.1 89 59.8 90.5 58.6" stroke="#ff8fab" stroke-width="1.05"
+      <path d="M82.8 58.1 C84.7 59.1 87 58.8 88.5 57.6" stroke="#ff8fab" stroke-width="1.05"
         fill="none" stroke-linecap="round" opacity="0.34">
         <animate attributeName="d"
-          values="M84.8 59.1 C86.7 60.1 89 59.8 90.5 58.6;
-                  M84.5 59.5 C86.8 60.6 90 60.1 91.4 58.8;
-                  M84.8 59.1 C86.7 60.1 89 59.8 90.5 58.6;
-                  M84.5 59.5 C86.8 60.6 90 60.1 91.4 58.8;
-                  M84.8 59.1 C86.7 60.1 89 59.8 90.5 58.6"
+          values="M82.8 58.1 C84.7 59.1 87 58.8 88.5 57.6;
+                  M82.5 58.5 C84.8 59.6 88 59.1 89.4 57.8;
+                  M82.8 58.1 C84.7 59.1 87 58.8 88.5 57.6;
+                  M82.5 58.5 C84.8 59.6 88 59.1 89.4 57.8;
+                  M82.8 58.1 C84.7 59.1 87 58.8 88.5 57.6"
           dur="1.05s" repeatCount="indefinite"
           calcMode="spline"
           keySplines=".22 .86 .38 1; .28 0 .72 1; .22 .86 .38 1; .28 0 .72 1"/>
       </path>
-      <path d="M79 61 C84 64 91 63.5 94 60" stroke="#4fbce7" stroke-width="1.05"
+      <path d="M77 60 C82 63 89 62.5 92 59" stroke="#4fbce7" stroke-width="1.05"
         fill="none" stroke-linecap="round" opacity="0.26"/>
 
       <path d="M44 13 C43 5 51 5 50 13 C55 3 64 8 57 16"
         transform="translate(31,7)"
-        stroke="#bff3ff" stroke-width="2.6" fill="none" stroke-linecap="round">
+        stroke="#bff3ff" stroke-width="2.2" fill="none" stroke-linecap="round" opacity="0.7">
         <animate attributeName="d"
           values="M44 13 C43 5 51 5 50 13 C55 3 64 8 57 16;
                   M43 13 C38 1 53 1 50 13 C58 0 69 8 58 16;
                   M44 13 C43 5 51 5 50 13 C55 3 64 8 57 16"
           dur="1.25s" repeatCount="indefinite"
           calcMode="spline" keySplines=".4 0 .6 1; .4 0 .6 1"/>
-        <animate attributeName="opacity" values="0.45; 1; 0.45" dur="1.25s" repeatCount="indefinite"/>
+        <animate attributeName="opacity" values="0.5; 0.9; 0.5" dur="1.25s" repeatCount="indefinite"/>
       </path>
+      <g transform="translate(68, 10)">
+        <circle cx="0" cy="0" r="2.2" fill="#bff3ff" opacity="0">
+          <animate attributeName="cy" values="0; -8; -14" dur="1.4s" repeatCount="indefinite"
+            calcMode="spline" keySplines=".2 .8 .4 1; .4 0 .8 1"/>
+          <animate attributeName="opacity" values="0; 0.7; 0" dur="1.4s" repeatCount="indefinite"/>
+          <animate attributeName="r" values="2.2; 1.8; 1" dur="1.4s" repeatCount="indefinite"/>
+        </circle>
+        <circle cx="7" cy="2" r="1.7" fill="#8eddff" opacity="0">
+          <animate attributeName="cy" values="2; -5; -12" dur="1.6s" begin="0.3s" repeatCount="indefinite"
+            calcMode="spline" keySplines=".2 .8 .4 1; .4 0 .8 1"/>
+          <animate attributeName="opacity" values="0; 0.6; 0" dur="1.6s" begin="0.3s" repeatCount="indefinite"/>
+          <animate attributeName="r" values="1.7; 1.4; 0.8" dur="1.6s" begin="0.3s" repeatCount="indefinite"/>
+        </circle>
+        <circle cx="13" cy="1" r="1.4" fill="#bff3ff" opacity="0">
+          <animate attributeName="cy" values="1; -7; -11" dur="1.2s" begin="0.6s" repeatCount="indefinite"
+            calcMode="spline" keySplines=".2 .8 .4 1; .4 0 .8 1"/>
+          <animate attributeName="opacity" values="0; 0.55; 0" dur="1.2s" begin="0.6s" repeatCount="indefinite"/>
+          <animate attributeName="r" values="1.4; 1.1; 0.6" dur="1.2s" begin="0.6s" repeatCount="indefinite"/>
+        </circle>
+      </g>
     </g>
   </g>
 </symbol>"""
