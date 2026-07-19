@@ -290,22 +290,20 @@ flip_vals = "; ".join(f"{v} 1" for v in flip_v)
 WV, WHV = 100, 72
 W_RENDER, H_RENDER = 52, 38
 
+def _container(x, y, fill):
+    """One cargo container: crisp box with two plank lines, Docker-logo style."""
+    return f"""
+        <rect x="{x}" y="{y}" width="13" height="10" rx="1" fill="{fill}"
+          stroke="{OUTLINE}" stroke-width="1.7" stroke-linejoin="round"/>
+        <line x1="{x + 4.33:.2f}" y1="{y + 1.2}" x2="{x + 4.33:.2f}" y2="{y + 8.8}"
+          stroke="{OUTLINE}" stroke-width="1" opacity="0.75"/>
+        <line x1="{x + 8.66:.2f}" y1="{y + 1.2}" x2="{x + 8.66:.2f}" y2="{y + 8.8}"
+          stroke="{OUTLINE}" stroke-width="1" opacity="0.75"/>"""
+
 container_rows = f"""
-      <g transform="rotate(-4 55 24)">
-      <g fill="{WBLUE2}" stroke="{OUTLINE}" stroke-width="2" opacity="0.98">
-        <rect x="45" y="14" width="10" height="9" rx="2"/>
-        <rect x="56" y="14" width="10" height="9" rx="2"/>
-        <rect x="34" y="25" width="10" height="9" rx="2"/>
-        <rect x="45" y="25" width="10" height="9" rx="2"/>
-        <rect x="56" y="25" width="10" height="9" rx="2"/>
-      </g>
-      <g stroke="{OUTLINE}" stroke-width="1.2" opacity="0.85">
-        <line x1="50" y1="14" x2="50" y2="23"/>
-        <line x1="61" y1="14" x2="61" y2="23"/>
-        <line x1="39" y1="25" x2="39" y2="34"/>
-        <line x1="50" y1="25" x2="50" y2="34"/>
-        <line x1="61" y1="25" x2="61" y2="34"/>
-      </g>
+      <g transform="rotate(-3 50 25)">
+{_container(44, 12.5, WBLUE2)}{_container(58, 12.5, WBLUE2)}
+{_container(30, 24, "#10A3DE")}{_container(44, 24, "#10A3DE")}{_container(58, 24, "#10A3DE")}
       </g>
 """
 
@@ -427,6 +425,7 @@ whale = f"""<symbol id="wh" viewBox="0 0 {WV} {WHV}" overflow="visible">
         fill="none" stroke-linecap="round" opacity="0.26"/>
 
       <path d="M44 13 C43 5 51 5 50 13 C55 3 64 8 57 16"
+        transform="translate(31,7)"
         stroke="#bff3ff" stroke-width="2.6" fill="none" stroke-linecap="round">
         <animate attributeName="d"
           values="M44 13 C43 5 51 5 50 13 C55 3 64 8 57 16;
