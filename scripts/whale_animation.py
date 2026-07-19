@@ -383,52 +383,35 @@ whale = f"""<symbol id="wh" viewBox="0 0 {WV} {WHV}" overflow="visible">
         fill="none" stroke-linecap="round">
         <animate attributeName="d"
           values="M74 54 C80 60 88 60 93 54;
-                  M74 54 C81 61.5 89.5 61 93.5 55.5;
-                  M74 54 C80 60 88 60 93 54;
-                  M74 54 C81 61.5 89.5 61 93.5 55.5;
+                  M74 54 C80 57 88 57 93 54;
                   M74 54 C80 60 88 60 93 54"
           dur="1.05s" repeatCount="indefinite"
           calcMode="spline"
-          keySplines=".22 .86 .38 1; .28 0 .72 1; .22 .86 .38 1; .28 0 .72 1"/>
+          keySplines=".22 .86 .38 1; .28 0 .72 1"/>
       </path>
-      <ellipse cx="84.5" cy="57.2" rx="2.7" ry="0.45" fill="#2b1020" opacity="0.16">
-        <animate attributeName="ry"
-          values="0.35; 1.15; 0.35; 1.15; 0.35"
-          dur="1.05s" repeatCount="indefinite"
-          calcMode="spline"
-          keySplines=".22 .86 .38 1; .28 0 .72 1; .22 .86 .38 1; .28 0 .72 1"/>
-        <animate attributeName="rx"
-          values="2.5; 3.25; 2.5; 3.25; 2.5"
-          dur="1.05s" repeatCount="indefinite"
-          calcMode="spline"
-          keySplines=".22 .86 .38 1; .28 0 .72 1; .22 .86 .38 1; .28 0 .72 1"/>
-        <animate attributeName="opacity"
-          values="0.14; 0.42; 0.14; 0.42; 0.14"
-          dur="1.05s" repeatCount="indefinite"
-          calcMode="spline"
-          keySplines=".22 .86 .38 1; .28 0 .72 1; .22 .86 .38 1; .28 0 .72 1"/>
-      </ellipse>
-      <path d="M86 55.2 L88.2 55.4 L87.2 57.3 Z" fill="#fff7fb" opacity="0.2">
-        <animate attributeName="opacity"
-          values="0.18; 0.62; 0.18; 0.62; 0.18"
-          dur="1.05s" repeatCount="indefinite"
-          calcMode="spline"
-          keySplines=".22 .86 .38 1; .28 0 .72 1; .22 .86 .38 1; .28 0 .72 1"/>
-      </path>
-      <path d="M82.8 58.1 C84.7 59.1 87 58.8 88.5 57.6" stroke="#ff8fab" stroke-width="1.05"
-        fill="none" stroke-linecap="round" opacity="0.34">
+      <path d="M76 55 C80 55 88 55 92 55 L92 55 C88 55 80 55 76 55 Z"
+        fill="#1a0a12" opacity="0">
         <animate attributeName="d"
-          values="M82.8 58.1 C84.7 59.1 87 58.8 88.5 57.6;
-                  M82.5 58.5 C84.8 59.6 88 59.1 89.4 57.8;
-                  M82.8 58.1 C84.7 59.1 87 58.8 88.5 57.6;
-                  M82.5 58.5 C84.8 59.6 88 59.1 89.4 57.8;
-                  M82.8 58.1 C84.7 59.1 87 58.8 88.5 57.6"
+          values="M76 55 C80 55 88 55 92 55 L92 55 C88 55 80 55 76 55 Z;
+                  M76 54.5 C80 54.5 88 54.5 92 54.5 L91 58 C87 60 80 60 77 58 Z;
+                  M76 55 C80 55 88 55 92 55 L92 55 C88 55 80 55 76 55 Z"
           dur="1.05s" repeatCount="indefinite"
           calcMode="spline"
-          keySplines=".22 .86 .38 1; .28 0 .72 1; .22 .86 .38 1; .28 0 .72 1"/>
+          keySplines=".22 .86 .38 1; .28 0 .72 1"/>
+        <animate attributeName="opacity"
+          values="0; 0.7; 0"
+          dur="1.05s" repeatCount="indefinite"
+          calcMode="spline"
+          keySplines=".22 .86 .38 1; .28 0 .72 1"/>
       </path>
-      <path d="M77 60 C82 63 89 62.5 92 59" stroke="#4fbce7" stroke-width="1.05"
-        fill="none" stroke-linecap="round" opacity="0.26"/>
+      <path d="M78 56 C80 56 86 56 88 56" stroke="#ff6b8a" stroke-width="0.8"
+        fill="none" stroke-linecap="round" opacity="0">
+        <animate attributeName="opacity"
+          values="0; 0.6; 0"
+          dur="1.05s" repeatCount="indefinite"
+          calcMode="spline"
+          keySplines=".22 .86 .38 1; .28 0 .72 1"/>
+      </path>
 
       <path d="M44 13 C43 5 51 5 50 13 C55 3 64 8 57 16"
         transform="translate(31,7)"
